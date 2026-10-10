@@ -32,6 +32,8 @@ data class UserProfile(
     val onboarded: Boolean = false,
     /** The first-launch introduction has been shown on this phone. */
     val introSeen: Boolean = false,
+    /** The "why we send notifications" explanation has been shown and answered. */
+    val notificationPromptSeen: Boolean = false,
     /** The user chose to use the app without a cloud account. */
     val guest: Boolean = false,
     val biometricLock: Boolean = false,
@@ -64,6 +66,7 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
             profileUpdatedAt = p[PROFILE_UPDATED_AT] ?: 0,
             onboarded = p[ONBOARDED] ?: false,
             introSeen = p[INTRO_SEEN] ?: false,
+            notificationPromptSeen = p[NOTIFICATION_PROMPT_SEEN] ?: false,
             guest = p[GUEST] ?: false,
             biometricLock = p[BIOMETRIC] ?: false,
             reminders = p[REMINDERS] ?: true,
@@ -97,6 +100,8 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
     }
 
     suspend fun setIntroSeen() = store.edit { it[INTRO_SEEN] = true }
+
+    suspend fun setNotificationPromptSeen() = store.edit { it[NOTIFICATION_PROMPT_SEEN] = true }
 
     suspend fun setGuest(guest: Boolean) = store.edit { it[GUEST] = guest }
 
@@ -151,6 +156,7 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
         val PROFILE_UPDATED_AT = longPreferencesKey("profile_updated_at")
         val ONBOARDED = booleanPreferencesKey("onboarded")
         val INTRO_SEEN = booleanPreferencesKey("intro_seen")
+        val NOTIFICATION_PROMPT_SEEN = booleanPreferencesKey("notification_prompt_seen")
         val GUEST = booleanPreferencesKey("guest")
         val BIOMETRIC = booleanPreferencesKey("biometric_lock")
         val REMINDERS = booleanPreferencesKey("reminders")

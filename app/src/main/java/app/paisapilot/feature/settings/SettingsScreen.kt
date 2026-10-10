@@ -1,5 +1,8 @@
 package app.paisapilot.feature.settings
 
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -107,6 +110,15 @@ fun SettingsScreen(
                 TextButton(onClick = viewModel::checkRemindersNow) { Text("Check reminders now") }
                 Note(state.reminderMessage)
             }
+        }
+
+        Section("Phone permission") {
+            Text(
+                "Reminders and nudges only appear if notifications are allowed for Fortun0 on this phone.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = { openNotificationSettings(context) }) { Text("Open notification settings") }
         }
 
         Section("Nudges & quotes") {
@@ -239,6 +251,13 @@ fun SettingsScreen(
             },
         )
     }
+}
+
+/** The phone's own notification page for this app, where a refused permission can be turned back on. */
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    runCatching { context.startActivity(intent) }
 }
 
 private fun nudgeFrequencyLabel(days: Int) = when (days) {
