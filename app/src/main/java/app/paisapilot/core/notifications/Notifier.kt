@@ -1,0 +1,69 @@
+package app.paisapilot.core.notifications
+
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import app.paisapilot.MainActivity
+import app.paisapilot.R
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/** Creates the notification channels and posts notifications. */
+@Singleton
+class Notifier @Inject constructor(@ApplicationContext private val context: Context) {
+
+    fun createChannels() {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_REMINDERS, "EMI & bill reminders", NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = "Alerts before an EMI, bill or card payment is due" }
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_GENERAL, "General", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "Tips, safety alerts and account updates" }
+        )
+    }
+
+    fun canNotify(): Boolean {
+        val granted = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        return granted && NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    /** A stable [key] means a repeat reminder replaces the earlier one instead of stacking. */
+    fun show(key: String, title: String, body: String, channel: String = CHANNEL_REMINDERS) {
+        if (!canNotify()) return
+        val open = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(R.drawable.ic_stat_notify)
+            .setColor(ContextCompat.getColor(context, R.color.brand_green))
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        @Suppress("MissingPermission") // checked by canNotify()
+        NotificationManagerCompat.from(context).notify(key.hashCode(), notification)
+    }
+
+    companion object {
+        const val CHANNEL_REMINDERS = "reminders"
+        const val CHANNEL_GENERAL = "general"
+    }
+}

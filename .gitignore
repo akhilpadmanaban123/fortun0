@@ -1,0 +1,24 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+*.apk
+*.aab
+*.jks
+*.keystore
+# Firebase config is per-project; each developer drops in their own
+app/google-services.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Release signing: never commit these
+keystore.properties
+keystore/
+.firebase/
+# Built APK/AAB files stay out; the store listing text and images are kept
+release/*
+!release/store-listing/
