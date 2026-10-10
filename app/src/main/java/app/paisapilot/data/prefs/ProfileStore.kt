@@ -37,6 +37,10 @@ data class UserProfile(
     val biometricLock: Boolean = false,
     val reminders: Boolean = true,
     val reminderDaysBefore: Int = 3,
+    /** Tracking reminders and money quotes: on/off, a nudge every N days, at this hour (0-23). */
+    val nudges: Boolean = true,
+    val nudgeEveryDays: Int = 1,
+    val nudgeHour: Int = 20,
 ) {
     val paydayOrDefault: Int get() = if (payday in 1..31) payday else 1
     val firstName: String get() = name.trim().substringBefore(' ')
@@ -64,6 +68,9 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
             biometricLock = p[BIOMETRIC] ?: false,
             reminders = p[REMINDERS] ?: true,
             reminderDaysBefore = p[REMINDER_DAYS] ?: 3,
+            nudges = p[NUDGES] ?: true,
+            nudgeEveryDays = p[NUDGE_EVERY_DAYS] ?: 1,
+            nudgeHour = p[NUDGE_HOUR] ?: 20,
         )
     }
 
@@ -99,6 +106,22 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
 
     suspend fun setReminderDaysBefore(days: Int) = store.edit { it[REMINDER_DAYS] = days }
 
+    suspend fun setNudges(enabled: Boolean) = store.edit { it[NUDGES] = enabled }
+
+    suspend fun setNudgeEveryDays(days: Int) = store.edit { it[NUDGE_EVERY_DAYS] = days }
+
+    suspend fun setNudgeHour(hour: Int) = store.edit { it[NUDGE_HOUR] = hour }
+
+    /** Returns how many nudges have been sent so far, then counts this one. */
+    suspend fun nextNudgeSequence(): Long {
+        var sequence = 0L
+        store.edit {
+            sequence = it[NUDGE_SEQUENCE] ?: 0
+            it[NUDGE_SEQUENCE] = sequence + 1
+        }
+        return sequence
+    }
+
     suspend fun syncCursor(uid: String, table: String): Long =
         store.data.first()[longPreferencesKey("cursor_${uid}_$table")] ?: 0
 
@@ -132,6 +155,10 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
         val BIOMETRIC = booleanPreferencesKey("biometric_lock")
         val REMINDERS = booleanPreferencesKey("reminders")
         val REMINDER_DAYS = intPreferencesKey("reminder_days_before")
+        val NUDGES = booleanPreferencesKey("nudges")
+        val NUDGE_EVERY_DAYS = intPreferencesKey("nudge_every_days")
+        val NUDGE_HOUR = intPreferencesKey("nudge_hour")
+        val NUDGE_SEQUENCE = longPreferencesKey("nudge_sequence")
         val LAST_SYNC = longPreferencesKey("last_sync_at")
     }
 }

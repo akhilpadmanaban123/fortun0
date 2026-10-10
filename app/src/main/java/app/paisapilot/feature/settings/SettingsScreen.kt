@@ -109,6 +109,36 @@ fun SettingsScreen(
             }
         }
 
+        Section("Nudges & quotes") {
+            SwitchRow(
+                title = "Tracking nudges",
+                subtitle = "A short reminder to log your spending, or a money quote. Never more than one a day.",
+                checked = profile.nudges,
+                onCheckedChange = viewModel::setNudges,
+            )
+            if (profile.nudges) {
+                Spacer(Modifier.height(8.dp))
+                DropdownField(
+                    label = "How often",
+                    selected = profile.nudgeEveryDays,
+                    options = listOf(1, 2, 3, 7),
+                    optionLabel = { nudgeFrequencyLabel(it) },
+                    onSelected = viewModel::setNudgeEveryDays,
+                )
+                Spacer(Modifier.height(8.dp))
+                DropdownField(
+                    label = "Around what time",
+                    selected = profile.nudgeHour,
+                    options = (7..22).toList(),
+                    optionLabel = { hourLabel(it) },
+                    onSelected = viewModel::setNudgeHour,
+                    hint = "Your phone may deliver it a little later to save battery.",
+                )
+                TextButton(onClick = viewModel::sendNudgeNow) { Text("Send one now") }
+                Note(state.nudgeMessage)
+            }
+        }
+
         Section("Backup & account") {
             when (val auth = state.auth) {
                 is AuthState.SignedIn -> {
@@ -209,6 +239,18 @@ fun SettingsScreen(
             },
         )
     }
+}
+
+private fun nudgeFrequencyLabel(days: Int) = when (days) {
+    1 -> "Every day"
+    7 -> "Once a week"
+    else -> "Every $days days"
+}
+
+/** 20 -> "8 PM". */
+private fun hourLabel(hour: Int): String {
+    val twelve = if (hour % 12 == 0) 12 else hour % 12
+    return "$twelve ${if (hour < 12) "AM" else "PM"}"
 }
 
 @Composable

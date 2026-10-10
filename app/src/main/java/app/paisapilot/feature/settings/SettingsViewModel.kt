@@ -3,6 +3,7 @@ package app.paisapilot.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.paisapilot.core.notifications.Notifier
+import app.paisapilot.core.notifications.NudgeScheduler
 import app.paisapilot.core.notifications.ReminderScheduler
 import app.paisapilot.data.prefs.ProfileStore
 import app.paisapilot.data.prefs.UserProfile
@@ -28,6 +29,7 @@ data class SettingsUiState(
     /** One-line result of the last action, shown under the section it belongs to. */
     val backupMessage: String? = null,
     val reminderMessage: String? = null,
+    val nudgeMessage: String? = null,
     val deleteError: String? = null,
 )
 
@@ -39,6 +41,7 @@ class SettingsViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val reminders: ReminderScheduler,
     private val notifier: Notifier,
+    private val nudges: NudgeScheduler,
 ) : ViewModel() {
 
     private val transient = MutableStateFlow(SettingsUiState())
@@ -58,6 +61,30 @@ class SettingsViewModel @Inject constructor(
 
     fun setReminderDays(days: Int) {
         viewModelScope.launch { profileStore.setReminderDaysBefore(days) }
+    }
+
+    fun setNudges(enabled: Boolean) = changeNudges { profileStore.setNudges(enabled) }
+
+    fun setNudgeEveryDays(days: Int) = changeNudges { profileStore.setNudgeEveryDays(days) }
+
+    fun setNudgeHour(hour: Int) = changeNudges { profileStore.setNudgeHour(hour) }
+
+    /** Saves a nudge setting, then reschedules so it takes effect from the next nudge. */
+    private fun changeNudges(save: suspend () -> Unit) {
+        viewModelScope.launch {
+            save()
+            nudges.apply(profileStore.current(), replace = true)
+            transient.update { it.copy(nudgeMessage = null) }
+        }
+    }
+
+    fun sendNudgeNow() {
+        if (!notifier.canNotify()) {
+            transient.update { it.copy(nudgeMessage = "Notifications are turned off for this app. Allow them in your phone's settings.") }
+            return
+        }
+        nudges.sendNow()
+        transient.update { it.copy(nudgeMessage = "Sent. Pull down your notifications to see it.") }
     }
 
     fun checkRemindersNow() {

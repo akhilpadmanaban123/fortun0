@@ -27,6 +27,11 @@ class Notifier @Inject constructor(@ApplicationContext private val context: Cont
             NotificationChannel(CHANNEL_REMINDERS, "EMI & bill reminders", NotificationManager.IMPORTANCE_HIGH)
                 .apply { description = "Alerts before an EMI, bill or card payment is due" }
         )
+        // Its own category, so nudges can be silenced in system settings without losing due-date alerts.
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_NUDGES, "Tracking nudges & quotes", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "A gentle reminder to log your spending, or a money quote" }
+        )
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_GENERAL, "General", NotificationManager.IMPORTANCE_DEFAULT)
                 .apply { description = "Tips, safety alerts and account updates" }
@@ -56,7 +61,7 @@ class Notifier @Inject constructor(@ApplicationContext private val context: Cont
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(open)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(if (channel == CHANNEL_REMINDERS) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .build()
         @Suppress("MissingPermission") // checked by canNotify()
         NotificationManagerCompat.from(context).notify(key.hashCode(), notification)
@@ -65,5 +70,6 @@ class Notifier @Inject constructor(@ApplicationContext private val context: Cont
     companion object {
         const val CHANNEL_REMINDERS = "reminders"
         const val CHANNEL_GENERAL = "general"
+        const val CHANNEL_NUDGES = "nudges"
     }
 }
