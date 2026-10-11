@@ -1,10 +1,12 @@
 package app.paisapilot.feature.dues
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -39,13 +41,16 @@ import app.paisapilot.core.designsystem.Stat
 import app.paisapilot.core.designsystem.TabScaffold
 import app.paisapilot.core.designsystem.icon
 import app.paisapilot.core.designsystem.tabListPadding
+import app.paisapilot.core.finance.LoanStanding
 import app.paisapilot.core.finance.LoanStatus
+import app.paisapilot.core.finance.Mood
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.daysBetween
 import app.paisapilot.core.util.dueLabel
 import app.paisapilot.core.util.short
 import app.paisapilot.core.util.toLocalDate
 import app.paisapilot.data.local.entity.Bill
+import app.paisapilot.feature.common.MoodFace
 import java.time.LocalDate
 
 private val tabs = listOf("Loans & EMIs", "Bills")
@@ -85,6 +90,9 @@ fun DuesScreen(
             }
 
             if (showingLoans) {
+                if (!state.loading) {
+                    item { StandingCard(state.standing) }
+                }
                 if (state.loans.isNotEmpty()) {
                     item {
                         SectionCard {
@@ -111,14 +119,7 @@ fun DuesScreen(
                 items(state.loans, key = { it.loan.id }) {
                     LoanCard(it, today, accountName = state.accountNames[it.loan.accountId], onClick = { onOpenLoan(it.loan.id) })
                 }
-                if (state.loans.isEmpty() && !state.loading) {
-                    item {
-                        EmptyState(
-                            Icons.Rounded.AccountBalance, "No loans yet",
-                            "Add a home, personal, bike or phone EMI to see its schedule, what is left and when it ends.",
-                        )
-                    }
-                }
+
             } else {
                 if (state.bills.isNotEmpty()) {
                     item {
@@ -154,6 +155,43 @@ fun DuesScreen(
             },
             onDismiss = { confirmPaid = null },
         )
+    }
+}
+
+/**
+ * The top of the loans list. Before any loan is added it explains what adding them gets you;
+ * after that it shows the repayment rank, with a face that smiles when every EMI is up to
+ * date and looks worried when one is missed.
+ */
+@Composable
+private fun StandingCard(standing: LoanStanding?) {
+    SectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MoodFace(standing?.mood ?: Mood.THINKING, size = 76.dp)
+            Spacer(Modifier.width(14.dp))
+            Column {
+                if (standing == null) {
+                    Text("Add all your loans and EMIs here", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Home, personal, vehicle, phone, card EMIs: every one. I will track each due date, show exactly what is left and what it is costing you, and help you find ways to clear them sooner.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text("Repayment rank: ${standing.rank}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(standing.headline, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(standing.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (standing != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "The rank counts only the loans listed here, so add every loan you have.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

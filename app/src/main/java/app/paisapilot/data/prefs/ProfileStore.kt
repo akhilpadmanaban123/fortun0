@@ -47,6 +47,9 @@ data class UserProfile(
     val premiumTestUnlock: Boolean = false,
     /** The user agreed to a summary of their finances being sent to the AI coach. */
     val coachConsent: Boolean = false,
+    /** End-of-day spending summary: on/off and the hour (0-23) it is sent. */
+    val dailySummary: Boolean = true,
+    val dailySummaryHour: Int = 22,
 ) {
     val paydayOrDefault: Int get() = if (payday in 1..31) payday else 1
     val firstName: String get() = name.trim().substringBefore(' ')
@@ -80,6 +83,8 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
             nudgeHour = p[NUDGE_HOUR] ?: 20,
             premiumTestUnlock = p[PREMIUM_TEST_UNLOCK] ?: false,
             coachConsent = p[COACH_CONSENT] ?: false,
+            dailySummary = p[DAILY_SUMMARY] ?: true,
+            dailySummaryHour = p[DAILY_SUMMARY_HOUR] ?: 22,
         )
     }
 
@@ -125,6 +130,9 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
     suspend fun setPremiumTestUnlock(enabled: Boolean) = store.edit { it[PREMIUM_TEST_UNLOCK] = enabled }
 
     suspend fun setCoachConsent(agreed: Boolean) = store.edit { it[COACH_CONSENT] = agreed }
+    suspend fun setDailySummary(enabled: Boolean) = store.edit { it[DAILY_SUMMARY] = enabled }
+
+    suspend fun setDailySummaryHour(hour: Int) = store.edit { it[DAILY_SUMMARY_HOUR] = hour }
 
     suspend fun setNudges(enabled: Boolean) = store.edit { it[NUDGES] = enabled }
 
@@ -179,6 +187,8 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
         val REMINDER_DAYS = intPreferencesKey("reminder_days_before")
         val PREMIUM_TEST_UNLOCK = booleanPreferencesKey("premium_test_unlock")
         val COACH_CONSENT = booleanPreferencesKey("coach_consent")
+        val DAILY_SUMMARY = booleanPreferencesKey("daily_summary")
+        val DAILY_SUMMARY_HOUR = intPreferencesKey("daily_summary_hour")
         val NUDGES = booleanPreferencesKey("nudges")
         val NUDGE_EVERY_DAYS = intPreferencesKey("nudge_every_days")
         val NUDGE_HOUR = intPreferencesKey("nudge_hour")

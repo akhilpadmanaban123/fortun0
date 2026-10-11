@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.paisapilot.MainActivity
 import app.paisapilot.R
+import app.paisapilot.navigation.PendingNavigation
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,11 +47,14 @@ class Notifier @Inject constructor(@ApplicationContext private val context: Cont
     }
 
     /** A stable [key] means a repeat reminder replaces the earlier one instead of stacking. */
-    fun show(key: String, title: String, body: String, channel: String = CHANNEL_REMINDERS) {
+    fun show(key: String, title: String, body: String, channel: String = CHANNEL_REMINDERS, destination: String? = null) {
         if (!canNotify()) return
+        // A distinct request code per notification, or Android would reuse one intent (and one destination) for all.
         val open = PendingIntent.getActivity(
-            context, 0,
-            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            context, key.hashCode(),
+            Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(PendingNavigation.EXTRA_ROUTE, destination),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, channel)

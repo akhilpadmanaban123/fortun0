@@ -18,6 +18,7 @@ coroutines = "1.10.2"
 firebaseBom = "34.3.0"
 googleServices = "4.4.3"
 crashlyticsPlugin = "3.0.6"
+lottie = "6.6.10"
 junit = "4.13.2"
 
 [libraries]
@@ -57,6 +58,8 @@ firebase-auth = { module = "com.google.firebase:firebase-auth" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+
+lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 

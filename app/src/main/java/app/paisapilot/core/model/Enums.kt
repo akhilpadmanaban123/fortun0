@@ -24,6 +24,20 @@ enum class LoanType(val label: String) {
     OTHER("Other EMI"),
 }
 
+/** Whether a loan's interest rate can change. Stored by name; do not rename. */
+enum class RateType(val label: String) {
+    UNSURE("Not sure"),
+    FIXED("Fixed"),
+    FLOATING("Floating"),
+}
+
+/** Whether the lender accepts payments above the EMI. Stored by name; do not rename. */
+enum class PrepayPolicy(val label: String) {
+    UNSURE("Not sure"),
+    ALLOWED("Yes"),
+    NOT_ALLOWED("No"),
+}
+
 /**
  * How often a bill comes round. Listed in the order shown to the user: every 1 to 9 months
  * (electricity is billed every 2 months in several states), then yearly.

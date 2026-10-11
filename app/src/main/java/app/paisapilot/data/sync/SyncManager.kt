@@ -5,6 +5,7 @@ import app.paisapilot.data.local.dao.SyncDao
 import app.paisapilot.data.local.entity.Account
 import app.paisapilot.data.local.entity.Bill
 import app.paisapilot.data.local.entity.CreditCard
+import app.paisapilot.data.local.entity.DailyCheckin
 import app.paisapilot.data.local.entity.Loan
 import app.paisapilot.data.local.entity.LoanPrepayment
 import app.paisapilot.data.local.entity.Syncable
@@ -52,6 +53,7 @@ class SyncManager @Inject constructor(
         Table("loan_prepayments", db.loanPrepaymentDao(), LoanPrepayment.serializer()),
         Table("bills", db.billDao(), Bill.serializer()),
         Table("transactions", db.txnDao(), Txn.serializer()),
+        Table("daily_checkins", db.dailyCheckinDao(), DailyCheckin.serializer()),
     )
 
     private val mutex = Mutex()

@@ -7,6 +7,8 @@ import app.paisapilot.core.finance.EmiCalculator
 import app.paisapilot.core.finance.LoanStatus
 import app.paisapilot.core.finance.status
 import app.paisapilot.core.model.LoanType
+import app.paisapilot.core.model.PrepayPolicy
+import app.paisapilot.core.model.RateType
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.toLocalDate
 import app.paisapilot.data.local.entity.Account
@@ -40,6 +42,9 @@ data class LoanForm(
     val outstanding: String = "",
     val accountId: String? = null,
     val autopay: Boolean = false,
+    val rateType: RateType = RateType.UNSURE,
+    val prepayPolicy: PrepayPolicy = PrepayPolicy.UNSURE,
+    val prepayCharge: String = "",
     /** Once the user types their own EMI or paid count, we stop overwriting it. */
     val emiEdited: Boolean = false,
     val paidEdited: Boolean = false,
@@ -97,6 +102,9 @@ class LoanEditViewModel @Inject constructor(
                     paid = loan.paidInstallments.toString(),
                     accountId = loan.accountId,
                     autopay = loan.autopay,
+                    rateType = loan.rateType,
+                    prepayPolicy = loan.prepayPolicy,
+                    prepayCharge = if (loan.prepayChargePct > 0) loan.prepayChargePct.toBigDecimal().stripTrailingZeros().toPlainString() else "",
                     emiEdited = true,
                     paidEdited = true,
                 )
@@ -132,7 +140,12 @@ class LoanEditViewModel @Inject constructor(
         val entered = Money.parse(f.outstanding)?.takeIf { !f.isEdit && f.outstanding.isNotBlank() }
         val calculated = f.draft?.outstandingMinor
 
+        val charge = f.prepayCharge.toDoubleOrNull()
+
         val errors = buildMap {
+            if (f.prepayCharge.isNotBlank() && (charge == null || charge < 0 || charge > 10)) {
+                put("prepayCharge", "Enter the charge as a percentage, e.g. 2 or 2.5.")
+            }
             if (f.name.isBlank()) put("name", "Give this loan a name, e.g. \"Bike loan\".")
             if (principal <= 0) put("principal", "Enter the loan amount.")
             if (rate == null || rate < 0 || rate > 60) put("rate", "Enter the yearly interest rate (0 for no-cost EMI).")
@@ -166,6 +179,10 @@ class LoanEditViewModel @Inject constructor(
                     paidInstallments = paid,
                     accountId = f.accountId,
                     autopay = f.autopay,
+                    rateType = f.rateType,
+                    prepayPolicy = f.prepayPolicy,
+                    // A charge only means something when part-payments are possible at all.
+                    prepayChargePct = if (f.prepayPolicy == PrepayPolicy.NOT_ALLOWED) 0.0 else charge ?: 0.0,
                     closed = paid >= tenure,
                 )
             )

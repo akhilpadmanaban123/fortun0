@@ -11,6 +11,7 @@ import androidx.navigation.navArgument
 import app.paisapilot.feature.activity.ActivityScreen
 import app.paisapilot.feature.activity.TxnAddScreen
 import app.paisapilot.feature.coach.CoachScreen
+import app.paisapilot.feature.daily.DailySummaryScreen
 import app.paisapilot.feature.dues.BillEditScreen
 import app.paisapilot.feature.dues.DuesScreen
 import app.paisapilot.feature.dues.LoanDetailScreen
@@ -72,6 +73,7 @@ fun AppNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         composable(Routes.SAFETY) { SafetyScreen(onBack = back) }
         composable(Routes.PREMIUM) { PremiumScreen(onBack = back) }
         composable(Routes.COACH) { CoachScreen(onBack = back, onOpenPremium = { nav.navigate(Routes.PREMIUM) }) }
+        composable(Routes.DAILY) { DailySummaryScreen(onBack = back) }
         composable(Routes.SETTINGS) { SettingsScreen(onBack = back, onEditProfile = { nav.navigate(Routes.PROFILE) }) }
         composable(Routes.PROFILE) { ProfileScreen(onboarding = false, onDone = back) }
     }

@@ -21,6 +21,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
     const val COACH = "coach"
+    const val DAILY = "daily"
 
     /** Argument names read by the ViewModels through SavedStateHandle. */
     const val ARG_ID = "id"

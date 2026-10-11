@@ -24,6 +24,7 @@ import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.SectionHeader
 import app.paisapilot.core.designsystem.TabScaffold
 import app.paisapilot.core.designsystem.tabListPadding
+import app.paisapilot.core.finance.MoodReader
 import app.paisapilot.core.model.TxnType
 import app.paisapilot.feature.activity.TxnRow
 import app.paisapilot.feature.dues.DueRow
@@ -68,6 +69,7 @@ fun HomeScreen(
                 return@LazyColumn
             }
 
+            item { MoodCard(MoodReader.read(snapshot), onClick = { onNavigate(Routes.DAILY) }) }
             item { SafeToSpendCard(snapshot) }
 
             if (snapshot.overdueCount > 0) {

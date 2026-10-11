@@ -2,6 +2,7 @@ package app.paisapilot.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.paisapilot.core.notifications.DailySummaryScheduler
 import app.paisapilot.core.notifications.Notifier
 import app.paisapilot.core.notifications.NudgeScheduler
 import app.paisapilot.core.notifications.ReminderScheduler
@@ -31,6 +32,7 @@ data class SettingsUiState(
     val backupMessage: String? = null,
     val reminderMessage: String? = null,
     val nudgeMessage: String? = null,
+    val summaryMessage: String? = null,
     val deleteError: String? = null,
     val isPremium: Boolean = false,
 )
@@ -45,6 +47,7 @@ class SettingsViewModel @Inject constructor(
     private val notifier: Notifier,
     private val nudges: NudgeScheduler,
     entitlements: Entitlements,
+    private val dailySummary: DailySummaryScheduler,
 ) : ViewModel() {
 
     private val transient = MutableStateFlow(SettingsUiState())
@@ -69,6 +72,27 @@ class SettingsViewModel @Inject constructor(
     /** Turning this off withdraws consent: the coach asks again before anything more is sent. */
     fun setCoachConsent(agreed: Boolean) {
         viewModelScope.launch { profileStore.setCoachConsent(agreed) }
+    }
+
+    fun setDailySummary(enabled: Boolean) = changeDailySummary { profileStore.setDailySummary(enabled) }
+
+    fun setDailySummaryHour(hour: Int) = changeDailySummary { profileStore.setDailySummaryHour(hour) }
+
+    private fun changeDailySummary(save: suspend () -> Unit) {
+        viewModelScope.launch {
+            save()
+            dailySummary.apply(profileStore.current(), replace = true)
+            transient.update { it.copy(summaryMessage = null) }
+        }
+    }
+
+    fun sendDailySummaryNow() {
+        if (!notifier.canNotify()) {
+            transient.update { it.copy(summaryMessage = "Notifications are turned off for this app. Allow them in your phone's settings.") }
+            return
+        }
+        dailySummary.sendNow()
+        transient.update { it.copy(summaryMessage = "Sent. Pull down your notifications to see it.") }
     }
 
     fun setNudges(enabled: Boolean) = changeNudges { profileStore.setNudges(enabled) }
