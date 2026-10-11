@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -125,6 +126,15 @@ fun LoanEditScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (form.startDateLooksWrong) {
+                        Text(
+                            "That next EMI is a long way off. With ${draft.paid} EMIs already paid, the first one was probably " +
+                                "${draft.paid} months ago, not on ${form.firstEmi.pretty()}.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LocalMoneyColors.current.warning,
+                        )
+                        TextButton(onClick = viewModel::fixStartDate) { Text("Fix the first EMI date for me") }
+                    }
                     val entered = Money.parse(form.outstanding)?.takeIf { !form.isEdit && form.outstanding.isNotBlank() }
                     if (entered != null && entered < draft.outstandingMinor) {
                         Text(

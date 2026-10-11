@@ -10,6 +10,8 @@ import app.paisapilot.core.model.LoanType
 import app.paisapilot.core.model.PrepayPolicy
 import app.paisapilot.core.model.RateType
 import app.paisapilot.core.util.Money
+import app.paisapilot.core.util.daysBetween
+import app.paisapilot.core.util.nextDayOfMonth
 import app.paisapilot.core.util.toLocalDate
 import app.paisapilot.data.local.entity.Account
 import app.paisapilot.data.local.entity.Loan
@@ -26,6 +28,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** An EMI is monthly, so a next one further off than this points to a wrong start date. */
+const val NEXT_EMI_TOO_FAR_DAYS = 35
 
 data class LoanForm(
     val isEdit: Boolean = false,
@@ -52,6 +57,16 @@ data class LoanForm(
 ) {
     val calculatedEmiMinor: Long
         get() = EmiCalculator.emi(Money.parse(principal) ?: 0, rate.toDoubleOrNull() ?: 0.0, tenure.toIntOrNull() ?: 0)
+
+    /**
+     * True when the answers put the next EMI more than about a month away even though EMIs
+     * are being paid monthly, which means the first EMI date does not match the EMIs paid.
+     */
+    val startDateLooksWrong: Boolean
+        get() {
+            val next = draft?.nextDueDate ?: return false
+            return (paid.toIntOrNull() ?: 0) > 0 && daysBetween(LocalDate.now(), next) > NEXT_EMI_TOO_FAR_DAYS
+        }
 
     /** The loan these answers describe, once enough is filled in to work out its schedule. */
     val draft: LoanStatus?
@@ -110,6 +125,16 @@ class LoanEditViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Moves the first EMI date back so that the EMIs already paid fit before today and the
+     * next one lands on its usual day this month or next. This is the fix for the common
+     * slip of leaving the first EMI date as today while saying several EMIs are paid.
+     */
+    fun fixStartDate() = update {
+        val nextDue = nextDayOfMonth(firstEmi.dayOfMonth, LocalDate.now())
+        copy(firstEmi = nextDue.minusMonths((paid.toIntOrNull() ?: 0).toLong()), paidEdited = true)
     }
 
     /** Applies a field change, then refreshes the values we derive for the user. */
