@@ -103,14 +103,12 @@ fun LoanEditScreen(
             error = form.errors["paid"], keyboardType = KeyboardType.Number, maxLength = 3,
             hint = "Counted from the first EMI date up to today. Change it if you have paid more or fewer.",
         )
-        // Only when adding: once the loan exists, extra payments are recorded on its own screen.
-        if (!form.isEdit) {
-            AmountField(
-                form.outstanding, { viewModel.update { copy(outstanding = it) } }, "Amount still owed today (optional)",
-                error = form.errors["outstanding"],
-                hint = "From your lender's app or latest statement. If you have paid extra before, it will be lower than our figure and we will match it.",
-            )
-        }
+        AmountField(
+            form.outstanding, { viewModel.update { copy(outstanding = it) } }, "Amount still owed today (optional)",
+            error = form.errors["outstanding"],
+            hint = "From your lender's app or latest statement. If you paid extra in earlier months, it will be lower than our figure and we " +
+                "will record the difference as earlier extra payments. Nothing is deducted from your accounts.",
+        )
         if (draft != null) {
             SectionCard {
                 Text(
@@ -135,7 +133,7 @@ fun LoanEditScreen(
                         )
                         TextButton(onClick = viewModel::fixStartDate) { Text("Fix the first EMI date for me") }
                     }
-                    val entered = Money.parse(form.outstanding)?.takeIf { !form.isEdit && form.outstanding.isNotBlank() }
+                    val entered = Money.parse(form.outstanding)?.takeIf { form.outstanding.isNotBlank() }
                     if (entered != null && entered < draft.outstandingMinor) {
                         Text(
                             "Your lender says ${Money.format(entered)}. The ${Money.format(draft.outstandingMinor - entered)} difference " +

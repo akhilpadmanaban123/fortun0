@@ -49,6 +49,7 @@ import app.paisapilot.core.designsystem.LocalMoneyColors
 import app.paisapilot.core.designsystem.ProgressLine
 import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.Stat
+import app.paisapilot.core.designsystem.SwitchRow
 import app.paisapilot.core.finance.Installment
 import app.paisapilot.core.finance.LoanStatus
 import app.paisapilot.core.model.PrepayPolicy
@@ -152,8 +153,8 @@ fun LoanDetailScreen(
         PrepayDialog(
             status = status,
             accountName = state.accountName,
-            onConfirm = {
-                viewModel.prepay(it)
+            onConfirm = { amount, paidEarlier ->
+                viewModel.prepay(amount, paidEarlier)
                 showPrepay = false
             },
             onDismiss = { showPrepay = false },
@@ -229,10 +230,11 @@ private fun FinishSoonerCard(ideas: List<PayoffIdea>, loan: Loan, onPayExtra: ()
 private fun PrepayDialog(
     status: LoanStatus,
     accountName: String?,
-    onConfirm: (Long) -> Unit,
+    onConfirm: (amountMinor: Long, paidEarlier: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
+    var paidEarlier by remember { mutableStateOf(false) }
     val amount = Money.parse(input) ?: 0
     val outstandingMinor = status.outstandingMinor
     // What this exact amount would save, worked out before the user commits to it.
@@ -261,12 +263,18 @@ private fun PrepayDialog(
                         color = LocalMoneyColors.current.positive,
                     )
                 }
-                if (accountName != null) {
+                SwitchRow(
+                    title = "I paid this in an earlier month",
+                    subtitle = "Lowers what you owe without recording an expense or touching your account balance.",
+                    checked = paidEarlier,
+                    onCheckedChange = { paidEarlier = it },
+                )
+                if (accountName != null && !paidEarlier) {
                     Text("It will be deducted from $accountName.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(amount) }, enabled = amount > 0) { Text("Record payment") } },
+        confirmButton = { TextButton(onClick = { onConfirm(amount, paidEarlier) }, enabled = amount > 0) { Text("Record payment") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

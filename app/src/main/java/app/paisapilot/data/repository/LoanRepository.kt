@@ -33,6 +33,8 @@ class LoanRepository @Inject constructor(
 
     fun observePrepayments(loanId: String): Flow<List<LoanPrepayment>> = prepaymentDao.observeForLoan(loanId)
 
+    suspend fun prepaymentsFor(loanId: String): List<LoanPrepayment> = prepaymentDao.forLoan(loanId)
+
     suspend fun loan(id: String): Loan? = dao.byId(id)?.takeUnless { it.deleted }
 
     suspend fun save(loan: Loan) {
