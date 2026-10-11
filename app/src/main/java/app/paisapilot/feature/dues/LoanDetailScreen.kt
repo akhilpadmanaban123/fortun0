@@ -56,6 +56,7 @@ import app.paisapilot.data.local.entity.Loan
 import app.paisapilot.core.finance.PayoffIdea
 import app.paisapilot.core.finance.PayoffIdeas
 import app.paisapilot.core.util.Money
+import app.paisapilot.core.util.daysBetween
 import app.paisapilot.core.util.dueLabel
 import app.paisapilot.core.util.pretty
 import java.time.LocalDate
@@ -357,6 +358,14 @@ private fun NextEmiCard(next: Installment, status: LoanStatus, onPay: () -> Unit
                 )
             }
             Button(onClick = onPay) { Text("Mark paid") }
+        }
+        if (daysBetween(LocalDate.now(), next.dueDate) > NEXT_EMI_TOO_FAR_DAYS) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "EMIs are monthly, so this date looks wrong. The first EMI date is probably set too late for the number of EMIs paid. Tap the pencil above to fix it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalMoneyColors.current.warning,
+            )
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onPayExtra, modifier = Modifier.fillMaxWidth()) {
