@@ -4,10 +4,10 @@ Everything to paste into Play Console. Character limits are Google's.
 
 ## Main store listing
 
-**App name** (30 max, this is 28)
+**App name** (30 max, this is 29)
 
 ```
-Fortun0: EMI & Money Tracker
+Fortun0: The Financial Expert
 ```
 
 **Short description** (80 max, this is 72)

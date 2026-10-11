@@ -71,6 +71,12 @@ fun AuthScreen(viewModel: AuthViewModel = hiltViewModel()) {
         BrandMark()
         Text("Fortun0", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(
+            "The Financial Expert",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
             "Every EMI, bill and rupee, on course.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
