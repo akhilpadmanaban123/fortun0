@@ -96,6 +96,41 @@ class ForecastEngineTest {
     }
 
     @Test
+    fun `rent, emis and large one-offs are not projected as daily spending`() {
+        fun spend(amount: Long, category: String) =
+            Txn(type = TxnType.EXPENSE, amountMinor = amount, category = category, dateEpochDay = today.toEpochDay())
+        val txns = listOf(
+            spend(1_280_000, "RENT"),      // once a month by nature
+            spend(2_200_000, "EMI"),       // an EMI typed in as an ordinary expense
+            spend(1_800_000, "FAMILY"),    // above 10% of the Rs 85,000 income: a one-off
+            spend(450_000, "FOOD"),        // everyday
+        )
+        val s = snapshot(txns = txns)
+        // Only the Rs 4,500 of food sets the pace: Rs 450 a day for the 21 days left.
+        assertEquals(45_000L, s.everydayPerDayMinor)
+        assertEquals(45_000L * 21, s.forecastSpendMinor)
+        assertEquals(6_500_000L - 45_000L * 21, s.monthEndForecastMinor)
+        // Everything is still counted as spent this month.
+        assertEquals(5_730_000L, s.monthSpendMinor)
+    }
+
+    @Test
+    fun `without a known income anything above 5000 rupees is a one-off`() {
+        val noIncome = UserProfile()
+        val big = Txn(type = TxnType.EXPENSE, amountMinor = 600_000, category = "SHOPPING", dateEpochDay = today.toEpochDay())
+        val small = Txn(type = TxnType.EXPENSE, amountMinor = 400_000, category = "SHOPPING", dateEpochDay = today.toEpochDay())
+        assertEquals(false, ForecastEngine.isEverydaySpend(big, noIncome.totalIncomeMinor))
+        assertEquals(true, ForecastEngine.isEverydaySpend(small, noIncome.totalIncomeMinor))
+    }
+
+    @Test
+    fun `the forecast parts add up to the forecast`() {
+        val spend = Txn(type = TxnType.EXPENSE, amountMinor = 450_000, category = "FOOD", dateEpochDay = today.toEpochDay())
+        val s = snapshot(bills = listOf(bill(today.plusDays(2))), txns = listOf(spend))
+        assertEquals(s.liquidMinor + s.forecastIncomeMinor - s.forecastDuesMinor - s.forecastSpendMinor, s.monthEndForecastMinor)
+    }
+
+    @Test
     fun `salary still to come this month is added to the forecast`() {
         val midMonth = profile.copy(payday = 25)
         val s = ForecastEngine.snapshot(today, midMonth, listOf(salary), emptyList(), emptyList(), emptyList(), emptyList())
