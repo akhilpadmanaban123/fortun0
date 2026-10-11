@@ -24,11 +24,24 @@ enum class LoanType(val label: String) {
     OTHER("Other EMI"),
 }
 
+/**
+ * How often a bill comes round. Listed in the order shown to the user: every 1 to 9 months
+ * (electricity is billed every 2 months in several states), then yearly.
+ *
+ * Bills are stored and synced by these names, so never rename one; QUARTERLY and
+ * HALF_YEARLY keep their original names for that reason.
+ */
 enum class BillFrequency(val label: String, val months: Int) {
     ONE_TIME("One time", 0),
     MONTHLY("Every month", 1),
+    EVERY_2_MONTHS("Every 2 months", 2),
     QUARTERLY("Every 3 months", 3),
+    EVERY_4_MONTHS("Every 4 months", 4),
+    EVERY_5_MONTHS("Every 5 months", 5),
     HALF_YEARLY("Every 6 months", 6),
+    EVERY_7_MONTHS("Every 7 months", 7),
+    EVERY_8_MONTHS("Every 8 months", 8),
+    EVERY_9_MONTHS("Every 9 months", 9),
     YEARLY("Every year", 12),
 }
 
