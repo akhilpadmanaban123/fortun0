@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.paisapilot.core.finance.LoanStatus
+import app.paisapilot.core.finance.PayoffIdea
+import app.paisapilot.core.finance.PayoffIdeas
 import app.paisapilot.core.finance.status
 import app.paisapilot.data.repository.LoanRepository
 import app.paisapilot.data.repository.WalletRepository
@@ -23,6 +25,8 @@ data class LoanDetailUiState(
     /** What the extra payments have bought, compared with the loan's original schedule. */
     val emisSaved: Int = 0,
     val interestSavedMinor: Long = 0,
+    /** Worked examples of paying extra, with what each would save. */
+    val ideas: List<PayoffIdea> = emptyList(),
 )
 
 @HiltViewModel
@@ -43,6 +47,7 @@ class LoanDetailViewModel @Inject constructor(
                 accountName = accounts.firstOrNull { it.id == loan?.accountId }?.name,
                 emisSaved = if (status != null && original != null) original.totalInstallments - status.totalInstallments else 0,
                 interestSavedMinor = if (status != null && original != null) original.totalInterestMinor - status.totalInterestMinor else 0,
+                ideas = status?.let(PayoffIdeas::forLoan).orEmpty(),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoanDetailUiState())
 
