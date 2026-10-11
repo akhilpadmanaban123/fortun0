@@ -43,6 +43,9 @@ data class UserProfile(
     val nudges: Boolean = true,
     val nudgeEveryDays: Int = 1,
     val nudgeHour: Int = 20,
+    /** End-of-day spending summary: on/off and the hour (0-23) it is sent. */
+    val dailySummary: Boolean = true,
+    val dailySummaryHour: Int = 22,
 ) {
     val paydayOrDefault: Int get() = if (payday in 1..31) payday else 1
     val firstName: String get() = name.trim().substringBefore(' ')
@@ -74,6 +77,8 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
             nudges = p[NUDGES] ?: true,
             nudgeEveryDays = p[NUDGE_EVERY_DAYS] ?: 1,
             nudgeHour = p[NUDGE_HOUR] ?: 20,
+            dailySummary = p[DAILY_SUMMARY] ?: true,
+            dailySummaryHour = p[DAILY_SUMMARY_HOUR] ?: 22,
         )
     }
 
@@ -115,6 +120,10 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
     suspend fun setReminders(enabled: Boolean) = store.edit { it[REMINDERS] = enabled }
 
     suspend fun setReminderDaysBefore(days: Int) = store.edit { it[REMINDER_DAYS] = days }
+
+    suspend fun setDailySummary(enabled: Boolean) = store.edit { it[DAILY_SUMMARY] = enabled }
+
+    suspend fun setDailySummaryHour(hour: Int) = store.edit { it[DAILY_SUMMARY_HOUR] = hour }
 
     suspend fun setNudges(enabled: Boolean) = store.edit { it[NUDGES] = enabled }
 
@@ -167,6 +176,8 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
         val BIOMETRIC = booleanPreferencesKey("biometric_lock")
         val REMINDERS = booleanPreferencesKey("reminders")
         val REMINDER_DAYS = intPreferencesKey("reminder_days_before")
+        val DAILY_SUMMARY = booleanPreferencesKey("daily_summary")
+        val DAILY_SUMMARY_HOUR = intPreferencesKey("daily_summary_hour")
         val NUDGES = booleanPreferencesKey("nudges")
         val NUDGE_EVERY_DAYS = intPreferencesKey("nudge_every_days")
         val NUDGE_HOUR = intPreferencesKey("nudge_hour")

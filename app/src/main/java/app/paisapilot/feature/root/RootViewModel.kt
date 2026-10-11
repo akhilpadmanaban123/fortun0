@@ -2,6 +2,7 @@ package app.paisapilot.feature.root
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.paisapilot.core.notifications.DailySummaryScheduler
 import app.paisapilot.core.notifications.NudgeScheduler
 import app.paisapilot.core.security.AppLockManager
 import app.paisapilot.data.prefs.ProfileStore
@@ -37,6 +38,7 @@ class RootViewModel @Inject constructor(
     private val appLock: AppLockManager,
     private val syncManager: SyncManager,
     private val nudges: NudgeScheduler,
+    private val dailySummary: DailySummaryScheduler,
 ) : ViewModel() {
 
     /** True while a freshly signed-in user's data is being fetched from the cloud. */
@@ -57,8 +59,12 @@ class RootViewModel @Inject constructor(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RootState.Loading)
 
     init {
-        // Make sure the nudge schedule exists (after an install, update or reboot) without resetting it.
-        viewModelScope.launch { nudges.apply(profileStore.current(), replace = false) }
+        // Make sure the nudge and daily summary schedules exist (after an install, update or reboot) without resetting them.
+        viewModelScope.launch {
+            val profile = profileStore.current()
+            nudges.apply(profile, replace = false)
+            dailySummary.apply(profile, replace = false)
+        }
         // On every verified sign-in, pull the user's existing data before deciding
         // whether they still need to go through onboarding.
         viewModelScope.launch {

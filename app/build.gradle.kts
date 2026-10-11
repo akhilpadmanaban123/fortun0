@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    implementation(libs.lottie.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

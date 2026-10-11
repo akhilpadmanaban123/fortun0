@@ -10,6 +10,7 @@ import app.paisapilot.data.local.AppDatabase
 import app.paisapilot.data.local.dao.AccountDao
 import app.paisapilot.data.local.dao.BillDao
 import app.paisapilot.data.local.dao.CreditCardDao
+import app.paisapilot.data.local.dao.DailyCheckinDao
 import app.paisapilot.data.local.dao.LoanDao
 import app.paisapilot.data.local.dao.LoanPrepaymentDao
 import app.paisapilot.data.local.dao.TxnDao
@@ -37,6 +38,7 @@ object AppModule {
     @Provides fun billDao(db: AppDatabase): BillDao = db.billDao()
     @Provides fun txnDao(db: AppDatabase): TxnDao = db.txnDao()
     @Provides fun loanPrepaymentDao(db: AppDatabase): LoanPrepaymentDao = db.loanPrepaymentDao()
+    @Provides fun dailyCheckinDao(db: AppDatabase): DailyCheckinDao = db.dailyCheckinDao()
 
     @Provides
     @Singleton

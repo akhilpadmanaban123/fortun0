@@ -1,5 +1,6 @@
 package app.paisapilot.core.finance
 
+import app.paisapilot.core.model.PrepayPolicy
 import app.paisapilot.core.util.toLocalDate
 import java.time.LocalDate
 
@@ -11,7 +12,12 @@ data class PayoffIdea(
     val emisSaved: Int,
     val interestSavedMinor: Long,
     val newEndDate: LocalDate?,
-)
+    /** What the lender charges for these extra payments, from the loan's part-payment charge. */
+    val chargeMinor: Long = 0,
+) {
+    /** The saving that actually reaches the user's pocket. */
+    val netSavedMinor: Long get() = interestSavedMinor - chargeMinor
+}
 
 /**
  * Works out what paying extra towards a loan's principal would save. Every figure comes from
@@ -24,16 +30,21 @@ object PayoffIdeas {
     private const val MIN_REMAINING = 4
     private const val ROUND_TO_MINOR = 50_000L // ₹500
 
+    /**
+     * Suggestions for a loan. None when the lender does not allow part-payments, when there
+     * is no interest to save, or when the lender's charge would eat the whole saving.
+     */
     fun forLoan(status: LoanStatus): List<PayoffIdea> {
         val loan = status.loan
         if (!status.isActive || loan.annualRatePct <= 0.0 || status.remaining < MIN_REMAINING) return emptyList()
+        if (loan.prepayPolicy == PrepayPolicy.NOT_ALLOWED) return emptyList()
 
         // A meaningful but realistic monthly top-up: about a tenth of the EMI, rounded to ₹500.
         val monthlyExtra = roundUp(loan.emiMinor / 10)
         return listOfNotNull(
             simulate(status, extraMinor = loan.emiMinor, everyMonth = false),
             simulate(status, extraMinor = monthlyExtra, everyMonth = true),
-        ).filter { it.interestSavedMinor > 0 }
+        ).filter { it.netSavedMinor > 0 }
     }
 
     /** What a specific extra amount would save; used to preview a payment before it is recorded. */
@@ -54,21 +65,26 @@ object PayoffIdeas {
             firstDue = loan.firstEmiEpochDay.toLocalDate(),
             prepayments = existing,
         )
+        // With a monthly top-up, one is paid alongside each EMI until the (shorter) loan ends.
+        val payments = if (everyMonth) (schedule.size - status.paid).coerceAtLeast(1) else 1
         return PayoffIdea(
             extraMinor = extraMinor,
             everyMonth = everyMonth,
             emisSaved = status.totalInstallments - schedule.size,
             interestSavedMinor = status.totalInterestMinor - schedule.sumOf { it.interestMinor },
             newEndDate = schedule.lastOrNull()?.dueDate,
+            chargeMinor = (extraMinor * payments * loan.prepayChargePct / 100.0).toLong(),
         )
     }
 
     /**
      * The loan where extra money does the most good: the highest interest rate among running
-     * loans. Null when there is nothing to choose between (fewer than two interest-bearing loans).
+     * loans that accept part-payments. Null when there is nothing to choose between.
      */
     fun payFirst(statuses: List<LoanStatus>): LoanStatus? {
-        val candidates = statuses.filter { it.isActive && it.loan.annualRatePct > 0.0 }
+        val candidates = statuses.filter {
+            it.isActive && it.loan.annualRatePct > 0.0 && it.loan.prepayPolicy != PrepayPolicy.NOT_ALLOWED
+        }
         if (candidates.size < 2) return null
         val best = candidates.maxBy { it.loan.annualRatePct }
         // If every loan charges the same rate there is no "first".

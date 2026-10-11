@@ -3,6 +3,8 @@ package app.paisapilot.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import app.paisapilot.core.model.LoanType
+import app.paisapilot.core.model.PrepayPolicy
+import app.paisapilot.core.model.RateType
 import kotlinx.serialization.Serializable
 
 /**
@@ -25,6 +27,10 @@ data class Loan(
     /** Account the EMI is debited from, if the user linked one. */
     val accountId: String? = null,
     val autopay: Boolean = false,
+    val rateType: RateType = RateType.UNSURE,
+    /** Whether the lender accepts extra payments towards principal, and what it charges for them. */
+    val prepayPolicy: PrepayPolicy = PrepayPolicy.UNSURE,
+    val prepayChargePct: Double = 0.0,
     val closed: Boolean = false,
     override val updatedAt: Long = now(),
     override val deleted: Boolean = false,

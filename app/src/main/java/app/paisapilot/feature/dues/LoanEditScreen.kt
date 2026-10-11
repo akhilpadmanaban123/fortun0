@@ -26,6 +26,8 @@ import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.SwitchRow
 import app.paisapilot.core.designsystem.TextInput
 import app.paisapilot.core.model.LoanType
+import app.paisapilot.core.model.PrepayPolicy
+import app.paisapilot.core.model.RateType
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.pretty
 import app.paisapilot.feature.common.AccountPicker
@@ -43,6 +45,7 @@ fun LoanEditScreen(
     val form by viewModel.form.collectAsStateWithLifecycle()
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
     val draft = form.draft
 
     FormScaffold(
@@ -51,6 +54,15 @@ fun LoanEditScreen(
         onSave = { viewModel.save(onDone) },
         onDelete = if (form.isEdit) ({ confirmDelete = true }) else null,
     ) {
+        SectionCard(onClick = { showHelp = true }) {
+            Text("Not sure of some of these details?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Get them from your loan statement in about 5 minutes. Tap to see how.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+
         Heading("About the loan")
         DropdownField(
             label = "Type",
@@ -126,6 +138,31 @@ fun LoanEditScreen(
             }
         }
 
+        Heading("Paying extra to finish sooner")
+        DropdownField(
+            label = "Is the interest rate fixed or floating?",
+            selected = form.rateType,
+            options = RateType.entries,
+            optionLabel = { it.label },
+            onSelected = { viewModel.update { copy(rateType = it) } },
+            hint = if (form.rateType == RateType.FLOATING) "Lenders generally cannot charge individuals for prepaying a floating-rate loan. Confirm with yours." else null,
+        )
+        DropdownField(
+            label = "Does your lender allow paying extra (part-payment)?",
+            selected = form.prepayPolicy,
+            options = PrepayPolicy.entries,
+            optionLabel = { it.label },
+            onSelected = { viewModel.update { copy(prepayPolicy = it) } },
+            hint = "It is in your loan agreement, or ask the lender. Extra payments cut the loan amount, so less interest is charged from the next month on.",
+        )
+        if (form.prepayPolicy != PrepayPolicy.NOT_ALLOWED) {
+            TextInput(
+                form.prepayCharge, { viewModel.update { copy(prepayCharge = it) } }, "Part-payment / pre-closure charge % (optional)",
+                error = form.errors["prepayCharge"], keyboardType = KeyboardType.Decimal, maxLength = 5,
+                hint = "What the lender takes on any extra amount you pay, e.g. 2. Leave blank if there is none or you are not sure.",
+            )
+        }
+
         Heading("How the EMI is paid")
         AccountPicker(
             label = "Which account is the EMI deducted from?",
@@ -152,6 +189,8 @@ fun LoanEditScreen(
             Text("Please fix the highlighted fields.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
         }
     }
+
+    if (showHelp) LoanDetailsHelpDialog(onDismiss = { showHelp = false })
 
     if (confirmDelete) {
         ConfirmDialog(

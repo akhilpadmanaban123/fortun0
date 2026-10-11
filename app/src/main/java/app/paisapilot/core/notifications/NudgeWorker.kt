@@ -45,6 +45,8 @@ class NudgeWorker @AssistedInject constructor(
 
         val today = LocalDate.now().toEpochDay()
         val loggedToday = txns.observeRecent(1).first().firstOrNull()?.dateEpochDay == today
+        // The daily summary already covers a day with spending logged; a quote on top would be noise.
+        if (!test && loggedToday && profile.dailySummary) return Result.success()
         val nudge = Nudges.pick(profileStore.nextNudgeSequence(), loggedToday)
         notifier.show(key = NOTIFICATION_KEY, title = nudge.title, body = nudge.body, channel = Notifier.CHANNEL_NUDGES)
         return Result.success()

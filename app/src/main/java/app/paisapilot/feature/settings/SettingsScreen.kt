@@ -121,10 +121,32 @@ fun SettingsScreen(
             TextButton(onClick = { openNotificationSettings(context) }) { Text("Open notification settings") }
         }
 
+        Section("Daily summary") {
+            SwitchRow(
+                title = "End-of-day summary",
+                subtitle = "What you spent today against today's limit, and a quick check on how you feel about it.",
+                checked = profile.dailySummary,
+                onCheckedChange = viewModel::setDailySummary,
+            )
+            if (profile.dailySummary) {
+                Spacer(Modifier.height(8.dp))
+                DropdownField(
+                    label = "Around what time",
+                    selected = profile.dailySummaryHour,
+                    options = (18..23).toList(),
+                    optionLabel = { hourLabel(it) },
+                    onSelected = viewModel::setDailySummaryHour,
+                    hint = "Your phone may deliver it a little later to save battery.",
+                )
+                TextButton(onClick = viewModel::sendDailySummaryNow) { Text("Send today's summary now") }
+                Note(state.summaryMessage)
+            }
+        }
+
         Section("Nudges & quotes") {
             SwitchRow(
                 title = "Tracking nudges",
-                subtitle = "A short reminder to log your spending, or a money quote. Never more than one a day.",
+                subtitle = "A short reminder to log your spending, or a money quote. Skipped on days you have already logged spending and get a daily summary.",
                 checked = profile.nudges,
                 onCheckedChange = viewModel::setNudges,
             )

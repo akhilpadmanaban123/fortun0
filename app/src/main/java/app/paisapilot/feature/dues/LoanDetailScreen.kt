@@ -51,6 +51,8 @@ import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.Stat
 import app.paisapilot.core.finance.Installment
 import app.paisapilot.core.finance.LoanStatus
+import app.paisapilot.core.model.PrepayPolicy
+import app.paisapilot.data.local.entity.Loan
 import app.paisapilot.core.finance.PayoffIdea
 import app.paisapilot.core.finance.PayoffIdeas
 import app.paisapilot.core.util.Money
@@ -99,8 +101,19 @@ fun LoanDetailScreen(
             status.next?.let { next ->
                 item { NextEmiCard(next, status, onPay = { confirmPay = true }, onPayExtra = { showPrepay = true }) }
             }
-            if (state.ideas.isNotEmpty()) {
-                item { FinishSoonerCard(state.ideas, onPayExtra = { showPrepay = true }) }
+            if (status.isActive && status.loan.prepayPolicy == PrepayPolicy.NOT_ALLOWED) {
+                item {
+                    SectionCard {
+                        Text("Extra payments are not allowed on this loan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "You told us your lender does not accept part-payments, so the EMIs are the only way to pay it down. If that changes, update it with the pencil above.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else if (state.ideas.isNotEmpty()) {
+                item { FinishSoonerCard(state.ideas, status.loan, onPayExtra = { showPrepay = true }) }
             }
             if (status.prepayments.isNotEmpty()) {
                 item { ExtraPaymentsCard(state, onRemove = { confirmRemove = it }) }
@@ -161,9 +174,19 @@ fun LoanDetailScreen(
     }
 }
 
+/** "Saves ₹600 in interest and 1 EMI.", or the same after the lender's charge when there is one. */
+private fun PayoffIdea.savingText(): String {
+    val emis = if (emisSaved > 0) " and $emisSaved EMI${if (emisSaved == 1) "" else "s"}" else ""
+    return when {
+        chargeMinor <= 0 -> "Saves ${Money.format(interestSavedMinor)} in interest$emis."
+        netSavedMinor > 0 -> "Saves ${Money.format(netSavedMinor)}$emis, after a ${Money.format(chargeMinor)} charge from the lender."
+        else -> "Not worth it: the lender's ${Money.format(chargeMinor)} charge is more than the ${Money.format(interestSavedMinor)} interest saved."
+    }
+}
+
 /** Worked examples of paying extra, so the saving is concrete before the user decides. */
 @Composable
-private fun FinishSoonerCard(ideas: List<PayoffIdea>, onPayExtra: () -> Unit) {
+private fun FinishSoonerCard(ideas: List<PayoffIdea>, loan: Loan, onPayExtra: () -> Unit) {
     SectionCard {
         Text("Finish this loan sooner", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(2.dp))
@@ -181,16 +204,18 @@ private fun FinishSoonerCard(ideas: List<PayoffIdea>, onPayExtra: () -> Unit) {
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                "Saves ${Money.format(idea.interestSavedMinor)} in interest" +
-                    (if (idea.emisSaved > 0) " and ${idea.emisSaved} EMI${if (idea.emisSaved == 1) "" else "s"}" else "") +
-                    (idea.newEndDate?.let { ". Loan ends ${it.pretty()}." } ?: "."),
+                idea.savingText() + (idea.newEndDate?.let { " Loan ends ${it.pretty()}." } ?: ""),
                 style = MaterialTheme.typography.bodyMedium,
                 color = LocalMoneyColors.current.positive,
             )
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Some lenders charge a fee for part-payments. Check with yours first.",
+            when {
+                loan.prepayChargePct > 0 -> "These figures are after your lender's ${loan.prepayChargePct}% part-payment charge."
+                loan.prepayPolicy == PrepayPolicy.ALLOWED -> "You told us your lender allows part-payments with no charge."
+                else -> "Check that your lender allows part-payments and what it charges, then add it with the pencil above for exact figures."
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -229,8 +254,7 @@ private fun PrepayDialog(
                 )
                 if (preview != null && preview.interestSavedMinor > 0) {
                     Text(
-                        "Saves ${Money.format(preview.interestSavedMinor)} in interest" +
-                            (if (preview.emisSaved > 0) " and ${preview.emisSaved} EMI${if (preview.emisSaved == 1) "" else "s"}" else "") + ".",
+                        preview.savingText(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = LocalMoneyColors.current.positive,
