@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -94,7 +95,22 @@ fun DuesScreen(
                         }
                     }
                 }
-                items(state.loans, key = { it.loan.id }) { LoanCard(it, today, onClick = { onOpenLoan(it.loan.id) }) }
+                state.payFirst?.let { first ->
+                    item {
+                        SectionCard(onClick = { onOpenLoan(first.loan.id) }) {
+                            Text("Paying extra? Start with ${first.loan.name}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "At ${first.loan.annualRatePct}% a year it charges the most interest, so every extra rupee saves the most here. Tap to see what it would save.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                items(state.loans, key = { it.loan.id }) {
+                    LoanCard(it, today, accountName = state.accountNames[it.loan.accountId], onClick = { onOpenLoan(it.loan.id) })
+                }
                 if (state.loans.isEmpty() && !state.loading) {
                     item {
                         EmptyState(
@@ -142,7 +158,7 @@ fun DuesScreen(
 }
 
 @Composable
-private fun LoanCard(status: LoanStatus, today: LocalDate, onClick: () -> Unit) {
+private fun LoanCard(status: LoanStatus, today: LocalDate, accountName: String?, onClick: () -> Unit) {
     val loan = status.loan
     val money = LocalMoneyColors.current
     val due = status.nextDueDate
@@ -166,6 +182,15 @@ private fun LoanCard(status: LoanStatus, today: LocalDate, onClick: () -> Unit) 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("${status.paid} of ${status.totalInstallments} EMIs paid", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("${Money.format(status.outstandingMinor)} left", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (status.isActive) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (accountName != null) "EMI is deducted from $accountName" + (if (loan.autopay) " (auto-debit)" else "")
+                else "No account chosen for this EMI yet",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (accountName != null) MaterialTheme.colorScheme.onSurfaceVariant else money.warning,
+            )
         }
     }
 }

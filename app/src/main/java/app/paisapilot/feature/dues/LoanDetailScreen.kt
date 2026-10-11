@@ -51,6 +51,8 @@ import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.Stat
 import app.paisapilot.core.finance.Installment
 import app.paisapilot.core.finance.LoanStatus
+import app.paisapilot.core.finance.PayoffIdea
+import app.paisapilot.core.finance.PayoffIdeas
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.dueLabel
 import app.paisapilot.core.util.pretty
@@ -97,6 +99,9 @@ fun LoanDetailScreen(
             status.next?.let { next ->
                 item { NextEmiCard(next, status, onPay = { confirmPay = true }, onPayExtra = { showPrepay = true }) }
             }
+            if (state.ideas.isNotEmpty()) {
+                item { FinishSoonerCard(state.ideas, onPayExtra = { showPrepay = true }) }
+            }
             if (status.prepayments.isNotEmpty()) {
                 item { ExtraPaymentsCard(state, onRemove = { confirmRemove = it }) }
             }
@@ -131,7 +136,7 @@ fun LoanDetailScreen(
 
     if (showPrepay && status != null) {
         PrepayDialog(
-            outstandingMinor = status.outstandingMinor,
+            status = status,
             accountName = state.accountName,
             onConfirm = {
                 viewModel.prepay(it)
@@ -156,16 +161,56 @@ fun LoanDetailScreen(
     }
 }
 
+/** Worked examples of paying extra, so the saving is concrete before the user decides. */
+@Composable
+private fun FinishSoonerCard(ideas: List<PayoffIdea>, onPayExtra: () -> Unit) {
+    SectionCard {
+        Text("Finish this loan sooner", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "Anything you pay above the EMI goes straight to the loan amount, so less interest is charged every month after.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ideas.forEach { idea ->
+            Spacer(Modifier.height(12.dp))
+            Text(
+                if (idea.everyMonth) "Add ${Money.format(idea.extraMinor)} to every EMI"
+                else "Pay one extra EMI (${Money.format(idea.extraMinor)}) now",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                "Saves ${Money.format(idea.interestSavedMinor)} in interest" +
+                    (if (idea.emisSaved > 0) " and ${idea.emisSaved} EMI${if (idea.emisSaved == 1) "" else "s"}" else "") +
+                    (idea.newEndDate?.let { ". Loan ends ${it.pretty()}." } ?: "."),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalMoneyColors.current.positive,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Some lenders charge a fee for part-payments. Check with yours first.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onPayExtra) { Text("Record an extra payment") }
+    }
+}
+
 /** Asks how much extra is being paid towards the principal. */
 @Composable
 private fun PrepayDialog(
-    outstandingMinor: Long,
+    status: LoanStatus,
     accountName: String?,
     onConfirm: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
     val amount = Money.parse(input) ?: 0
+    val outstandingMinor = status.outstandingMinor
+    // What this exact amount would save, worked out before the user commits to it.
+    val preview = PayoffIdeas.simulate(status, amount.coerceAtMost(outstandingMinor), everyMonth = false)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Pay extra towards principal") },
@@ -182,6 +227,15 @@ private fun PrepayDialog(
                     hint = if (amount > outstandingMinor) "More than you owe. Only ${Money.format(outstandingMinor)} will be applied."
                     else "You still owe ${Money.format(outstandingMinor)}.",
                 )
+                if (preview != null && preview.interestSavedMinor > 0) {
+                    Text(
+                        "Saves ${Money.format(preview.interestSavedMinor)} in interest" +
+                            (if (preview.emisSaved > 0) " and ${preview.emisSaved} EMI${if (preview.emisSaved == 1) "" else "s"}" else "") + ".",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LocalMoneyColors.current.positive,
+                    )
+                }
                 if (accountName != null) {
                     Text("It will be deducted from $accountName.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -201,7 +255,7 @@ private fun ExtraPaymentsCard(state: LoanDetailUiState, onRemove: (LoanPrepaymen
         Text(
             buildString {
                 append("${Money.format(status.prepaidMinor)} paid extra")
-                if (state.emisSaved > 0) append(" · ${state.emisSaved} fewer EMIs")
+                if (state.emisSaved > 0) append(" · ${state.emisSaved} fewer EMI${if (state.emisSaved == 1) "" else "s"}")
                 if (state.interestSavedMinor > 0) append(" · ${Money.format(state.interestSavedMinor)} interest saved")
             },
             style = MaterialTheme.typography.bodyMedium,
@@ -255,10 +309,12 @@ private fun SummaryCard(status: LoanStatus, accountName: String?) {
             Stat("Total interest", Money.format(status.totalInterestMinor), Modifier.weight(1f))
             Stat("Interest still to pay", Money.format(status.interestRemainingMinor), Modifier.weight(1f))
         }
-        if (accountName != null) {
-            Spacer(Modifier.height(12.dp))
-            Stat("Paid from", accountName + if (loan.autopay) " (auto-pay)" else "")
-        }
+        Spacer(Modifier.height(12.dp))
+        Stat(
+            "EMI is deducted from",
+            if (accountName != null) accountName + (if (loan.autopay) " (auto-debit)" else "") else "Not chosen yet. Tap the pencil to choose.",
+            valueColor = if (accountName != null) MaterialTheme.colorScheme.onSurface else LocalMoneyColors.current.warning,
+        )
     }
 }
 

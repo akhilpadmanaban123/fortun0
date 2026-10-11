@@ -58,6 +58,7 @@ fun HomeScreen(
             return@TabScaffold
         }
         val snapshot = overview.snapshot
+        val accountNames = overview.accounts.associate { it.id to it.name }
         LazyColumn(
             contentPadding = tabListPadding(inner, hasFab = true),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -74,6 +75,16 @@ fun HomeScreen(
             }
 
             item { ThisMonthCard(snapshot) }
+            if (overview.accounts.isNotEmpty()) {
+                item {
+                    AccountsCard(
+                        accounts = overview.accounts,
+                        s = snapshot,
+                        onOpenAccount = { onNavigate(Routes.accountEdit(it)) },
+                        onOpenDues = { onOpenTab(Routes.DUES) },
+                    )
+                }
+            }
             if (snapshot.monthSpendMinor > 0) {
                 item { DailySpendCard(state.dailySpend, snapshot) }
             }
@@ -92,7 +103,9 @@ fun HomeScreen(
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            snapshot.upcoming.take(UPCOMING_ON_HOME).forEach { DueRow(it, snapshot.today) }
+                            snapshot.upcoming.take(UPCOMING_ON_HOME).forEach {
+                                DueRow(it, snapshot.today, accountName = accountNames[it.accountId])
+                            }
                         }
                     }
                 }

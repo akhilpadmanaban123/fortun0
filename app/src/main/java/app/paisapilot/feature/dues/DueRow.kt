@@ -19,7 +19,7 @@ import java.time.LocalDate
 
 /** One upcoming EMI, bill or card payment, with urgency shown by colour. */
 @Composable
-fun DueRow(due: Due, today: LocalDate, modifier: Modifier = Modifier) {
+fun DueRow(due: Due, today: LocalDate, modifier: Modifier = Modifier, accountName: String? = null) {
     val money = LocalMoneyColors.current
     val days = daysBetween(today, due.date)
     val urgency = when {
@@ -34,7 +34,9 @@ fun DueRow(due: Due, today: LocalDate, modifier: Modifier = Modifier) {
             DueKind.CARD -> Icons.Rounded.CreditCard
         },
         title = due.title,
-        subtitle = "${due.subtitle} · ${due.date.short()}" + if (due.autopay) " · Auto-pay" else "",
+        subtitle = "${due.subtitle} · ${due.date.short()}" +
+            (if (accountName != null) " · from $accountName" else "") +
+            if (due.autopay) " · Auto-pay" else "",
         modifier = modifier,
         tint = when (due.kind) {
             DueKind.EMI -> MaterialTheme.colorScheme.primary

@@ -25,6 +25,8 @@ data class Due(
     val amountMinor: Long,
     val date: LocalDate,
     val autopay: Boolean = false,
+    /** The account this is paid from, when the user has chosen one. */
+    val accountId: String? = null,
 ) {
     fun isOverdue(today: LocalDate) = date.isBefore(today)
 }
@@ -85,6 +87,7 @@ object ForecastEngine {
                 amountMinor = next.amountMinor,
                 date = next.dueDate,
                 autopay = loan.autopay,
+                accountId = loan.accountId,
             )
         }
         bills.filter { it.active }.forEach { bill ->
@@ -96,6 +99,7 @@ object ForecastEngine {
                 amountMinor = bill.amountMinor,
                 date = bill.nextDueEpochDay.toLocalDate(),
                 autopay = bill.autopay,
+                accountId = bill.accountId,
             )
         }
         cards.filter { it.outstandingMinor > 0 }.forEach { card ->

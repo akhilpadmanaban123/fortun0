@@ -116,6 +116,24 @@ class LoanRepository @Inject constructor(
         return applied
     }
 
+    /**
+     * Notes extra principal that was paid before the user started tracking this loan, so the
+     * balance here matches the lender's. Nothing is deducted from any account and no expense
+     * is recorded, because the money left long ago.
+     */
+    suspend fun recordEarlierPrepayment(loanId: String, amountMinor: Long, afterInstallment: Int) {
+        if (amountMinor <= 0) return
+        prepaymentDao.upsert(
+            LoanPrepayment(
+                loanId = loanId,
+                amountMinor = amountMinor,
+                dateEpochDay = LocalDate.now().toEpochDay(),
+                afterInstallment = afterInstallment,
+            )
+        )
+        sync.requestSync()
+    }
+
     /** Undoes an extra payment: the principal goes back up and the recorded expense is removed. */
     suspend fun removePrepayment(prepaymentId: String) {
         val prepayment = prepaymentDao.byId(prepaymentId)?.takeUnless { it.deleted } ?: return

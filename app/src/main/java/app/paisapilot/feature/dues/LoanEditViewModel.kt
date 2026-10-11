@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.paisapilot.core.finance.EmiCalculator
+import app.paisapilot.core.finance.LoanStatus
+import app.paisapilot.core.finance.status
 import app.paisapilot.core.model.LoanType
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.toLocalDate
@@ -34,6 +36,8 @@ data class LoanForm(
     val emi: String = "",
     val firstEmi: LocalDate = LocalDate.now(),
     val paid: String = "0",
+    /** What the lender says is still owed today; optional, and only asked when adding. */
+    val outstanding: String = "",
     val accountId: String? = null,
     val autopay: Boolean = false,
     /** Once the user types their own EMI or paid count, we stop overwriting it. */
@@ -43,6 +47,20 @@ data class LoanForm(
 ) {
     val calculatedEmiMinor: Long
         get() = EmiCalculator.emi(Money.parse(principal) ?: 0, rate.toDoubleOrNull() ?: 0.0, tenure.toIntOrNull() ?: 0)
+
+    /** The loan these answers describe, once enough is filled in to work out its schedule. */
+    val draft: LoanStatus?
+        get() {
+            val principalMinor = Money.parse(principal) ?: 0
+            val months = tenure.toIntOrNull() ?: 0
+            val emiMinor = Money.parse(emi) ?: 0
+            if (principalMinor <= 0 || months <= 0 || emiMinor <= 0) return null
+            return Loan(
+                name = name, type = type, principalMinor = principalMinor,
+                annualRatePct = rate.toDoubleOrNull() ?: 0.0, tenureMonths = months, emiMinor = emiMinor,
+                firstEmiEpochDay = firstEmi.toEpochDay(), paidInstallments = paid.toIntOrNull() ?: 0,
+            ).status()
+        }
 }
 
 @HiltViewModel
@@ -110,6 +128,9 @@ class LoanEditViewModel @Inject constructor(
         val tenure = f.tenure.toIntOrNull() ?: 0
         val emi = Money.parse(f.emi) ?: 0
         val paid = f.paid.toIntOrNull() ?: 0
+        // The lender's figure can only be lower than ours, which means extra was paid earlier.
+        val entered = Money.parse(f.outstanding)?.takeIf { !f.isEdit && f.outstanding.isNotBlank() }
+        val calculated = f.draft?.outstandingMinor
 
         val errors = buildMap {
             if (f.name.isBlank()) put("name", "Give this loan a name, e.g. \"Bike loan\".")
@@ -117,7 +138,10 @@ class LoanEditViewModel @Inject constructor(
             if (rate == null || rate < 0 || rate > 60) put("rate", "Enter the yearly interest rate (0 for no-cost EMI).")
             if (tenure !in 1..480) put("tenure", "Enter the number of months (1 to 480).")
             if (emi <= 0) put("emi", "Enter the monthly EMI.")
-            if (paid !in 0..tenure.coerceAtLeast(0)) put("paid", "This cannot be more than the tenure.")
+            if (paid !in 0..tenure.coerceAtLeast(0)) put("paid", "This cannot be more than the total months.")
+            if (entered != null && calculated != null && entered > calculated) {
+                put("outstanding", "More than the ${Money.format(calculated)} we calculate. Check the EMIs paid, or leave this blank.")
+            }
         }
         if (errors.isNotEmpty()) {
             _form.update { it.copy(errors = errors) }
@@ -145,6 +169,10 @@ class LoanEditViewModel @Inject constructor(
                     closed = paid >= tenure,
                 )
             )
+            // Bring the loan in line with the lender: the gap is extra principal already paid.
+            if (entered != null && calculated != null && entered < calculated) {
+                loans.recordEarlierPrepayment(base.id, calculated - entered, afterInstallment = paid)
+            }
             onSaved()
         }
     }
