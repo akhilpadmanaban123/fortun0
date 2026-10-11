@@ -15,6 +15,7 @@ import app.paisapilot.core.util.nextDayOfMonth
 import app.paisapilot.core.util.toLocalDate
 import app.paisapilot.data.local.entity.Account
 import app.paisapilot.data.local.entity.Loan
+import app.paisapilot.data.local.entity.LoanPrepayment
 import app.paisapilot.data.repository.LoanRepository
 import app.paisapilot.data.repository.WalletRepository
 import app.paisapilot.navigation.Routes
@@ -34,6 +35,9 @@ const val NEXT_EMI_TOO_FAR_DAYS = 35
 
 data class LoanForm(
     val isEdit: Boolean = false,
+    /** The saved loan's id and the extra payments already recorded on it, when editing. */
+    val loanId: String? = null,
+    val prepayments: List<LoanPrepayment> = emptyList(),
     val name: String = "",
     val type: LoanType = LoanType.PERSONAL,
     val lender: String = "",
@@ -76,10 +80,11 @@ data class LoanForm(
             val emiMinor = Money.parse(emi) ?: 0
             if (principalMinor <= 0 || months <= 0 || emiMinor <= 0) return null
             return Loan(
+                id = loanId ?: "draft",
                 name = name, type = type, principalMinor = principalMinor,
                 annualRatePct = rate.toDoubleOrNull() ?: 0.0, tenureMonths = months, emiMinor = emiMinor,
                 firstEmiEpochDay = firstEmi.toEpochDay(), paidInstallments = paid.toIntOrNull() ?: 0,
-            ).status()
+            ).status(prepayments)
         }
 }
 
@@ -106,6 +111,8 @@ class LoanEditViewModel @Inject constructor(
                 original = loan
                 _form.value = LoanForm(
                     isEdit = true,
+                    loanId = loan.id,
+                    prepayments = loans.prepaymentsFor(loan.id),
                     name = loan.name,
                     type = loan.type,
                     lender = loan.lender,
@@ -162,7 +169,7 @@ class LoanEditViewModel @Inject constructor(
         val emi = Money.parse(f.emi) ?: 0
         val paid = f.paid.toIntOrNull() ?: 0
         // The lender's figure can only be lower than ours, which means extra was paid earlier.
-        val entered = Money.parse(f.outstanding)?.takeIf { !f.isEdit && f.outstanding.isNotBlank() }
+        val entered = Money.parse(f.outstanding)?.takeIf { f.outstanding.isNotBlank() }
         val calculated = f.draft?.outstandingMinor
 
         val charge = f.prepayCharge.toDoubleOrNull()

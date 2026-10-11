@@ -55,8 +55,19 @@ class LoanDetailViewModel @Inject constructor(
         viewModelScope.launch { loans.payNextInstallment(loanId) }
     }
 
-    fun prepay(amountMinor: Long) {
-        viewModelScope.launch { loans.prepay(loanId, amountMinor) }
+    /**
+     * Records an extra payment. One made today becomes an expense and comes out of the linked
+     * account; one [paidEarlier] only lowers what is owed, because that money left long ago.
+     */
+    fun prepay(amountMinor: Long, paidEarlier: Boolean) {
+        viewModelScope.launch {
+            if (paidEarlier) {
+                val status = state.value.status ?: return@launch
+                loans.recordEarlierPrepayment(loanId, amountMinor.coerceAtMost(status.outstandingMinor), afterInstallment = status.paid)
+            } else {
+                loans.prepay(loanId, amountMinor)
+            }
+        }
     }
 
     fun removePrepayment(id: String) {
