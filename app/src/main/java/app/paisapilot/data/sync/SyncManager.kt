@@ -19,7 +19,9 @@ import com.google.firebase.firestore.SetOptions
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.KSerializer
@@ -39,7 +41,7 @@ class SyncManager @Inject constructor(
     private val firebase: FirebaseProvider,
     private val auth: AuthRepository,
     private val profileStore: ProfileStore,
-    db: AppDatabase,
+    private val db: AppDatabase,
 ) {
     private class Table<T : Syncable>(val name: String, val dao: SyncDao<T>, val serializer: KSerializer<T>)
 
@@ -61,12 +63,29 @@ class SyncManager @Inject constructor(
         val uid = auth.verifiedUid ?: return false
         val userDoc = firebase.firestore?.collection("users")?.document(uid) ?: return false
         mutex.withLock {
+            claimLocalData(uid)
             syncProfile(userDoc)
             tables.forEach { syncTable(uid, userDoc, it) }
             registerDevice(userDoc)
             profileStore.setLastSyncAt(System.currentTimeMillis())
         }
         return true
+    }
+
+    /**
+     * Makes sure the data on this phone belongs to [uid] before anything is uploaded.
+     * Data left behind by a different account is erased rather than merged into this one.
+     * Data created without an account has no owner yet and is adopted, which is how a
+     * local-only user keeps their data when they create an account.
+     */
+    private suspend fun claimLocalData(uid: String) {
+        val owner = profileStore.ownerUid()
+        if (owner == uid) return
+        if (owner != null) {
+            withContext(Dispatchers.IO) { db.clearAllTables() }
+            profileStore.clear()
+        }
+        profileStore.setOwnerUid(uid)
     }
 
     private suspend fun syncProfile(userDoc: DocumentReference) {

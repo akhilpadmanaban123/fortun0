@@ -42,9 +42,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val form by viewModel.form.collectAsStateWithLifecycle()
-    LaunchedEffect(suggestedName, form.loaded) {
-        if (form.loaded && suggestedName.isNotBlank()) viewModel.suggestName(suggestedName)
-    }
+    LaunchedEffect(suggestedName) { viewModel.load(suggestedName) }
 
     FormScaffold(
         title = if (onboarding) "Your money profile" else "Edit profile",

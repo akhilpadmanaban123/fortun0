@@ -99,6 +99,11 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
         }
     }
 
+    /** Uid of the account the data on this phone belongs to; null for local-only data. */
+    suspend fun ownerUid(): String? = store.data.first()[OWNER_UID]
+
+    suspend fun setOwnerUid(uid: String) = store.edit { it[OWNER_UID] = uid }
+
     suspend fun setIntroSeen() = store.edit { it[INTRO_SEEN] = true }
 
     suspend fun setNotificationPromptSeen() = store.edit { it[NOTIFICATION_PROMPT_SEEN] = true }
@@ -145,6 +150,7 @@ class ProfileStore @Inject constructor(private val store: DataStore<Preferences>
     }
 
     private companion object {
+        val OWNER_UID = stringPreferencesKey("owner_uid")
         val NAME = stringPreferencesKey("name")
         val AVATAR = intPreferencesKey("avatar")
         val AGE = intPreferencesKey("age")

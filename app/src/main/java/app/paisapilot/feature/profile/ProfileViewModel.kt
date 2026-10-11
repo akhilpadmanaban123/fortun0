@@ -34,27 +34,28 @@ class ProfileViewModel @Inject constructor(
     private val _form = MutableStateFlow(ProfileForm())
     val form: StateFlow<ProfileForm> = _form
 
-    init {
+    /**
+     * Fills the form from the saved profile. Called each time the screen opens, not once in
+     * init: during onboarding this ViewModel lives as long as the app, so after a sign-out
+     * it would otherwise still hold the previous person's answers. When no name has been
+     * saved yet, [suggestedName] (from the sign-up form) is offered instead.
+     */
+    fun load(suggestedName: String = "") {
         viewModelScope.launch {
             val p = profileStore.current()
-            _form.update {
-                it.copy(
-                    name = p.name,
-                    avatar = p.avatar,
-                    age = if (p.age > 0) p.age.toString() else "",
-                    income = Money.toInput(p.monthlyIncomeMinor),
-                    payday = p.payday,
-                    extraIncome = Money.toInput(p.extraIncomeMinor),
-                    emiEstimate = Money.toInput(p.emiEstimateMinor),
-                    confidence = p.confidence,
-                    loaded = true,
-                )
-            }
+            _form.value = ProfileForm(
+                name = p.name.ifBlank { suggestedName },
+                avatar = p.avatar,
+                age = if (p.age > 0) p.age.toString() else "",
+                income = Money.toInput(p.monthlyIncomeMinor),
+                payday = p.payday,
+                extraIncome = Money.toInput(p.extraIncomeMinor),
+                emiEstimate = Money.toInput(p.emiEstimateMinor),
+                confidence = p.confidence,
+                loaded = true,
+            )
         }
     }
-
-    /** Pre-fills the name from the sign-up form, unless the user has already typed one. */
-    fun suggestName(name: String) = _form.update { if (it.name.isBlank()) it.copy(name = name) else it }
 
     fun update(change: ProfileForm.() -> ProfileForm) = _form.update { it.change().copy(nameError = null) }
 
