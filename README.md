@@ -86,6 +86,56 @@ npx firebase-tools@13.29.1 deploy --only hosting --project app-paisapilot
 The app links to `https://app-paisapilot.web.app/privacy.html`. Play Console needs that URL
 and `.../delete-account.html`.
 
+## Premium: the AI money coach
+
+Premium is developed on the `premium` branch. The first feature is the coach: a chat that
+answers questions using a summary of the user's own finances.
+
+```
+app  --(question + summary, Firebase sign-in token)-->  server/coach-worker  --(API key)-->  OpenRouter
+```
+
+The AI provider's key lives only in the worker, never in the app. The worker checks the
+Firebase token (valid, this project, email verified), caps request sizes and counts each
+user's questions per day.
+
+**Try it locally with no accounts or keys** (a stand-in AI echoes what it receives):
+
+```
+cd server/coach-worker
+node test/mock-provider.js                 # terminal 1: fake AI provider on :8799
+npx wrangler@4 dev --port 8787 --local     # terminal 2: the worker, reads .dev.vars
+```
+
+`.dev.vars` (git-ignored) for that setup:
+
+```
+OPENROUTER_API_KEY=local-test-key-not-real
+OPENROUTER_BASE_URL=http://127.0.0.1:8799
+```
+
+Then build the app against it and sign in with a real, verified account on the emulator:
+
+```
+gradlew.bat :app:installDebug -PcoachUrl=http://10.0.2.2:8787
+```
+
+In the app: More > Premium > "Unlock Premium for testing" (debug builds only), then More > Money coach.
+
+**Deploying for real** needs a free Cloudflare account and an OpenRouter API key:
+
+```
+cd server/coach-worker
+npx wrangler@4 login
+npx wrangler@4 kv namespace create USAGE      # paste the id into wrangler.toml and uncomment the block
+npx wrangler@4 secret put OPENROUTER_API_KEY  # paste the key when asked; it is never written to a file
+npx wrangler@4 deploy                         # prints the https://fortun0-coach.<you>.workers.dev address
+```
+
+Put that address in `local.properties` as `coach.url=https://...` and rebuild.
+
+Not done yet: Play Billing. Until it is, release builds always report "not premium".
+
 ## Project layout
 
 ```

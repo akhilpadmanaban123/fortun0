@@ -43,16 +43,27 @@ Firebase Authentication). It is encrypted in transit and at rest by Google. Acce
 email-verified user to read and write only their own data.</p>
 
 <h2>Who we share it with</h2>
-<p>Nobody, other than Google as our service provider for the following:</p>
+<p>Nobody, other than the service providers named here. Google provides the following:</p>
 <ul>
   <li>Firebase Authentication, to manage sign-in</li>
   <li>Cloud Firestore, to store your backup</li>
   <li>Firebase Cloud Messaging, to deliver notifications</li>
   <li>Firebase Crashlytics, to collect crash reports</li>
 </ul>
+<p>If you choose to use the AI money coach, the summary described below is also processed by Cloudflare (which runs our
+coach service) and by the AI model provider reached through OpenRouter.</p>
 <p>Google processes this data on our behalf under its own terms:
 <a href="https://firebase.google.com/support/privacy">firebase.google.com/support/privacy</a>.
 We may disclose data if the law requires it.</p>
+
+<h2>The AI money coach (Premium)</h2>
+<p>The coach is optional and off until you agree to it in the app. When you ask it a question, the app sends your question
+and a summary of your finances to our coach service, which passes them to an AI model provider (through OpenRouter) to
+write the reply. The summary contains your first name and age, income, balances, loans, bills, credit card usage and
+spending totals. It does not contain account or card numbers, your email address, or individual transactions.</p>
+<p>We do not store your questions, the summary or the replies; the conversation exists only on your screen and is gone
+when you leave it. We keep a count of how many questions each account asks per day, to enforce a daily limit.
+You can withdraw your agreement at any time in More &gt; Settings &gt; AI money coach.</p>
 
 <h2>How long we keep it</h2>
 <p>Your account data is kept until you delete your account. Crash reports are kept by Firebase for 90 days.</p>

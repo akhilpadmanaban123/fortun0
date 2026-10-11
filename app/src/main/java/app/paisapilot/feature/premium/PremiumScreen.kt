@@ -17,11 +17,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.paisapilot.core.designsystem.DetailScaffold
+import app.paisapilot.core.designsystem.SectionCard
+import app.paisapilot.core.designsystem.SwitchRow
 import app.paisapilot.core.premium.Feature
 
 @Composable
-fun PremiumScreen(onBack: () -> Unit) {
+fun PremiumScreen(onBack: () -> Unit, viewModel: PremiumViewModel = hiltViewModel()) {
+    val isPremium by viewModel.isPremium.collectAsStateWithLifecycle()
     DetailScaffold(title = "Premium", onBack = onBack) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(56.dp))
@@ -39,7 +45,17 @@ fun PremiumScreen(onBack: () -> Unit) {
         Feature.premium.forEach { LockedFeatureCard(it) }
         Spacer(Modifier.height(4.dp))
         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text("Coming soon", style = MaterialTheme.typography.titleMedium)
+            Text(if (isPremium) "Premium is on" else "Subscriptions coming soon", style = MaterialTheme.typography.titleMedium)
+        }
+        if (viewModel.testUnlockAvailable) {
+            SectionCard {
+                SwitchRow(
+                    title = "Unlock Premium for testing",
+                    subtitle = "Development builds only. The Play Store version does not have this switch.",
+                    checked = isPremium,
+                    onCheckedChange = viewModel::setTestUnlock,
+                )
+            }
         }
     }
 }

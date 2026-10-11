@@ -24,6 +24,14 @@ val keystoreProps = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 
+// Address of the coach service (server/coach-worker). Set coach.url in local.properties, or pass
+// -PcoachUrl=... for a one-off build. Left empty, the coach screen explains it is not set up.
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val coachUrl = (findProperty("coachUrl") as String?) ?: localProps.getProperty("coach.url", "")
+
 // -PfirebaseEmulator=true points debug builds at the local Firebase Emulator Suite.
 val useFirebaseEmulator = (findProperty("firebaseEmulator") as String?)?.toBoolean() ?: false
 
@@ -39,6 +47,7 @@ android {
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "FIREBASE_EMULATOR", "false")
+        buildConfigField("String", "COACH_URL", "\"$coachUrl\"")
     }
 
     signingConfigs {

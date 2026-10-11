@@ -20,6 +20,7 @@ object Routes {
     const val PREMIUM = "premium"
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
+    const val COACH = "coach"
 
     /** Argument names read by the ViewModels through SavedStateHandle. */
     const val ARG_ID = "id"

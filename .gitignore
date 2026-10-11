@@ -22,3 +22,8 @@ keystore/
 # Built APK/AAB files stay out; the store listing text and images are kept
 release/*
 !release/store-listing/
+
+# Coach service: local secrets and tooling
+server/coach-worker/.dev.vars
+server/coach-worker/.wrangler/
+server/coach-worker/node_modules/

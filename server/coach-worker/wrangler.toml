@@ -1,0 +1,22 @@
+name = "fortun0-coach"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# The Firebase project whose signed-in users may use the coach.
+FIREBASE_PROJECT_ID = "app-paisapilot"
+# Any chat model id from https://openrouter.ai/models. Ids ending in ":free" cost nothing but
+# are rate-limited, may be withdrawn, and may log prompts: fine for testing, not for launch.
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+# Questions each user may ask per day (only enforced when the USAGE store below is bound).
+DAILY_LIMIT = "30"
+
+# The provider key is a secret, never a var. Set it once with:
+#   npx wrangler secret put OPENROUTER_API_KEY
+# For local runs put it in .dev.vars (git-ignored).
+
+# Per-user daily counter. Create it with `npx wrangler kv namespace create USAGE`,
+# paste the id it prints, and uncomment:
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "<id from the command above>"

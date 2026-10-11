@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.paisapilot.core.notifications.Notifier
 import app.paisapilot.core.notifications.NudgeScheduler
 import app.paisapilot.core.notifications.ReminderScheduler
+import app.paisapilot.core.premium.Entitlements
 import app.paisapilot.data.prefs.ProfileStore
 import app.paisapilot.data.prefs.UserProfile
 import app.paisapilot.data.repository.AuthRepository
@@ -31,6 +32,7 @@ data class SettingsUiState(
     val reminderMessage: String? = null,
     val nudgeMessage: String? = null,
     val deleteError: String? = null,
+    val isPremium: Boolean = false,
 )
 
 @HiltViewModel
@@ -42,13 +44,14 @@ class SettingsViewModel @Inject constructor(
     private val reminders: ReminderScheduler,
     private val notifier: Notifier,
     private val nudges: NudgeScheduler,
+    entitlements: Entitlements,
 ) : ViewModel() {
 
     private val transient = MutableStateFlow(SettingsUiState())
 
     val state: StateFlow<SettingsUiState> =
-        combine(profileStore.profile, auth.state, profileStore.lastSyncAt, transient) { profile, authState, lastSync, t ->
-            t.copy(profile = profile, auth = authState, lastSyncAt = lastSync)
+        combine(profileStore.profile, auth.state, profileStore.lastSyncAt, transient, entitlements.isPremium) { profile, authState, lastSync, t, premium ->
+            t.copy(profile = profile, auth = authState, lastSyncAt = lastSync, isPremium = premium)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun setBiometricLock(enabled: Boolean) {
@@ -61,6 +64,11 @@ class SettingsViewModel @Inject constructor(
 
     fun setReminderDays(days: Int) {
         viewModelScope.launch { profileStore.setReminderDaysBefore(days) }
+    }
+
+    /** Turning this off withdraws consent: the coach asks again before anything more is sent. */
+    fun setCoachConsent(agreed: Boolean) {
+        viewModelScope.launch { profileStore.setCoachConsent(agreed) }
     }
 
     fun setNudges(enabled: Boolean) = changeNudges { profileStore.setNudges(enabled) }

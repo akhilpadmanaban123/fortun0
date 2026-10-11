@@ -151,6 +151,18 @@ fun SettingsScreen(
             }
         }
 
+        if (state.isPremium || profile.coachConsent) {
+            Section("AI money coach") {
+                SwitchRow(
+                    title = "Share my summary with the coach",
+                    subtitle = "A summary of your income, balances, loans, bills and spending is sent to an AI service when you ask a question. " +
+                        "Turn off to stop; the coach will ask again before sending anything.",
+                    checked = profile.coachConsent,
+                    onCheckedChange = viewModel::setCoachConsent,
+                )
+            }
+        }
+
         Section("Backup & account") {
             when (val auth = state.auth) {
                 is AuthState.SignedIn -> {

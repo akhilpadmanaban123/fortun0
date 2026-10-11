@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
@@ -48,7 +49,15 @@ fun MoreScreen(onNavigate: (String) -> Unit, viewModel: MoreViewModel = hiltView
         ) {
             state?.let { current ->
                 item { ProfileCard(current, onClick = { onNavigate(Routes.PROFILE) }) }
-                item { LockedFeatureCard(Feature.AI_COACH, onClick = { onNavigate(Routes.PREMIUM) }) }
+                item {
+                    if (current.isPremium) {
+                        MenuCard(Icons.Rounded.Forum, "Money coach", "Ask about your loans, bills and spending", MaterialTheme.colorScheme.primary) {
+                            onNavigate(Routes.COACH)
+                        }
+                    } else {
+                        LockedFeatureCard(Feature.AI_COACH, onClick = { onNavigate(Routes.PREMIUM) })
+                    }
+                }
             }
             item {
                 MenuCard(Icons.Rounded.Insights, "Financial health", "Your score out of 100 and how to improve it", MaterialTheme.colorScheme.primary) {
