@@ -1,5 +1,6 @@
 package app.paisapilot.core.finance
 
+import app.paisapilot.core.model.TxnCategory
 import app.paisapilot.core.model.TxnType
 import app.paisapilot.core.util.daysBetween
 import app.paisapilot.core.util.nextDayOfMonth
@@ -44,6 +45,12 @@ data class MoneySnapshot(
     val safeToSpendMinor: Long,
     val safePerDayMinor: Long,
     val monthEndForecastMinor: Long,
+    /** The parts of the forecast, so the screen can show how the figure was reached. */
+    val forecastIncomeMinor: Long = 0,
+    val forecastDuesMinor: Long = 0,
+    val forecastSpendMinor: Long = 0,
+    /** Typical everyday spending per day so far this month; see [ForecastEngine.isEverydaySpend]. */
+    val everydayPerDayMinor: Long = 0,
     val upcoming: List<Due>,
     val monthlyEmiMinor: Long,
     val loanOutstandingMinor: Long,
@@ -67,6 +74,28 @@ data class MoneySnapshot(
 object ForecastEngine {
 
     private const val UPCOMING_WINDOW_DAYS = 45L
+
+    /** Payments in these categories happen about once a month, however the user recorded them. */
+    private val ONCE_A_MONTH = setOf(TxnCategory.RENT, TxnCategory.EMI, TxnCategory.UTILITIES, TxnCategory.EDUCATION)
+
+    /** A single expense above this share of monthly income is treated as a one-off. */
+    private const val ONE_OFF_INCOME_SHARE = 0.10
+
+    /** The one-off threshold when income is not known: Rs 5,000. */
+    private const val ONE_OFF_FALLBACK_MINOR = 500_000L
+
+    /**
+     * Whether an expense is the kind that repeats day to day (food, travel, small shopping)
+     * and so is fair to project forward. Rent, EMIs, bills and large one-off payments are
+     * not: having paid rent on the 3rd says nothing about what will be spent on the 20th.
+     * Counting them as daily spending is what once made the forecast wildly negative.
+     */
+    fun isEverydaySpend(txn: Txn, monthlyIncomeMinor: Long): Boolean {
+        if (txn.type != TxnType.EXPENSE || txn.loanId != null || txn.billId != null) return false
+        if (TxnCategory.fromName(txn.category) in ONCE_A_MONTH) return false
+        val oneOffAbove = if (monthlyIncomeMinor > 0) (monthlyIncomeMinor * ONE_OFF_INCOME_SHARE).toLong() else ONE_OFF_FALLBACK_MINOR
+        return txn.amountMinor <= oneOffAbove
+    }
 
     fun dues(
         today: LocalDate,
@@ -136,8 +165,7 @@ object ForecastEngine {
         val recordedIncome = monthTxns.filter { it.type == TxnType.INCOME }.sumOf { it.amountMinor }
         val expenses = monthTxns.filter { it.type == TxnType.EXPENSE }
         val spend = expenses.sumOf { it.amountMinor }
-        // Spending not tied to an EMI or bill; this is what the daily burn-rate is based on.
-        val discretionary = expenses.filter { it.loanId == null && it.billId == null }.sumOf { it.amountMinor }
+        val everyday = expenses.filter { isEverydaySpend(it, profile.totalIncomeMinor) }.sumOf { it.amountMinor }
 
         val allDues = dues(today, loans, bills, cards, prepayments)
         val nextPayday = nextDayOfMonth(profile.paydayOrDefault, today, inclusive = false)
@@ -151,9 +179,10 @@ object ForecastEngine {
             !nextPayday.isAfter(monthEnd) && recordedIncome < profile.monthlyIncomeMinor
         val incomeAhead = if (salaryStillDue) profile.monthlyIncomeMinor else 0L
         val duesThisMonth = allDues.filter { !it.date.isAfter(monthEnd) }.sumOf { it.amountMinor }
-        val dailyBurn = discretionary / today.dayOfMonth
+        val dailyBurn = everyday / today.dayOfMonth
         val daysLeft = daysBetween(today, monthEnd)
-        val forecast = liquid + incomeAhead - duesThisMonth - dailyBurn * daysLeft
+        val spendAhead = dailyBurn * daysLeft
+        val forecast = liquid + incomeAhead - duesThisMonth - spendAhead
 
         val statuses = loans.map { it.status(prepayments) }.filter { it.isActive }
 
@@ -170,6 +199,10 @@ object ForecastEngine {
             safeToSpendMinor = safe,
             safePerDayMinor = if (safe > 0) safe / daysToPayday else 0,
             monthEndForecastMinor = forecast,
+            forecastIncomeMinor = incomeAhead,
+            forecastDuesMinor = duesThisMonth,
+            forecastSpendMinor = spendAhead,
+            everydayPerDayMinor = dailyBurn,
             upcoming = allDues.filter { !it.date.isAfter(today.plusDays(UPCOMING_WINDOW_DAYS)) },
             monthlyEmiMinor = statuses.sumOf { it.loan.emiMinor },
             loanOutstandingMinor = statuses.sumOf { it.outstandingMinor },

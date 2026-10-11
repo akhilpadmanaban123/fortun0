@@ -40,6 +40,7 @@ import app.paisapilot.core.designsystem.PairedBars
 import app.paisapilot.core.designsystem.ScoreRing
 import app.paisapilot.core.designsystem.StackedBar
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import app.paisapilot.core.designsystem.ChartSlice
@@ -51,6 +52,7 @@ import app.paisapilot.core.designsystem.Stat
 import app.paisapilot.core.finance.MoneySnapshot
 import app.paisapilot.core.model.TxnCategory
 import app.paisapilot.core.util.Money
+import app.paisapilot.core.util.daysBetween
 import app.paisapilot.core.util.short
 import app.paisapilot.navigation.Routes
 
@@ -174,6 +176,7 @@ internal fun ThisMonthCard(s: MoneySnapshot) {
 @Composable
 internal fun ForecastCard(s: MoneySnapshot) {
     val money = LocalMoneyColors.current
+    val daysLeft = daysBetween(s.today, YearMonth.from(s.today).atEndOfMonth())
     SectionCard {
         Text("Expected month-end balance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
@@ -183,13 +186,31 @@ internal fun ForecastCard(s: MoneySnapshot) {
             fontWeight = FontWeight.Bold,
             color = if (s.monthEndForecastMinor < 0) money.negative else MaterialTheme.colorScheme.onSurface,
         )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            if (s.monthEndForecastMinor < 0) "At this pace you will run short. Hold back on non-essentials."
-            else "After the dues still to come and your usual daily spending.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(Modifier.height(10.dp))
+        // The working, so the figure can be checked rather than taken on trust.
+        ForecastLine("In cash and accounts now", Money.format(s.liquidMinor))
+        if (s.forecastIncomeMinor > 0) ForecastLine("Salary still to come", "+" + Money.format(s.forecastIncomeMinor))
+        ForecastLine("EMIs, bills and card dues left this month", "-" + Money.format(s.forecastDuesMinor))
+        ForecastLine(
+            "Everyday spending, ${Money.format(s.everydayPerDayMinor)} a day for $daysLeft days",
+            "-" + Money.format(s.forecastSpendMinor),
         )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            if (s.monthEndForecastMinor < 0) "You are on course to run short. Hold back on non-essentials, or check your account balances are up to date."
+            else "Everyday spending is your daily average so far, leaving out rent, EMIs, bills and large one-off payments.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (s.monthEndForecastMinor < 0) money.negative else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ForecastLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(12.dp))
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 
