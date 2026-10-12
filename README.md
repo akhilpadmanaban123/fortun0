@@ -37,7 +37,7 @@ Without Firebase configured the app builds and runs in local-only mode.
 ## Turning on accounts, backup and push (one-time Firebase setup)
 
 1. Create a project at https://console.firebase.google.com (the free Spark plan is enough).
-2. Add an Android app with package name `app.paisapilot`, download `google-services.json`
+2. Add an Android app with package name `app.fortun0`, download `google-services.json`
    and put it in the `app/` folder. It is git-ignored on purpose.
 3. Authentication > Sign-in method: enable **Email/Password**.
 4. Firestore Database: create a database (production mode, region `asia-south1` for India).
