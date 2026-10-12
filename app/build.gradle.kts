@@ -40,7 +40,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "app.paisapilot"
+        applicationId = "app.fortun0"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
