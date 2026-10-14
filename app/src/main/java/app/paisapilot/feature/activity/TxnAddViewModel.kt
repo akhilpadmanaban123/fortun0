@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.paisapilot.core.model.AccountType
+import app.paisapilot.core.model.CategoryInfo
 import app.paisapilot.core.model.TxnCategory
 import app.paisapilot.core.model.TxnType
 import app.paisapilot.core.util.Money
@@ -43,7 +44,9 @@ data class MoneyOption(
 data class TxnForm(
     val type: TxnType = TxnType.EXPENSE,
     val amount: String = "",
-    val category: TxnCategory = TxnCategory.FOOD,
+    val category: CategoryInfo = CategoryInfo.of(TxnCategory.FOOD),
+    /** Categories the user typed themselves, kept per kind of transaction. */
+    val customCategories: Map<TxnType, List<CategoryInfo>> = emptyMap(),
     val from: MoneyOption? = null,
     val to: MoneyOption? = null,
     val date: LocalDate = LocalDate.now(),
@@ -53,6 +56,10 @@ data class TxnForm(
     val cards: List<MoneyOption> = emptyList(),
     val errors: Map<String, String> = emptyMap(),
 ) {
+    /** The built-in categories for this kind of transaction, then the user's own. */
+    val categories: List<CategoryInfo>
+        get() = TxnCategory.of(type).map { CategoryInfo.of(it) } + customCategories[type].orEmpty()
+
     /** Where an expense was paid from, or an income received. Only expenses can go on a card. */
     val sources: List<MoneyOption>
         get() = if (type == TxnType.EXPENSE) accounts + cards else accounts
@@ -73,7 +80,7 @@ class TxnAddViewModel @Inject constructor(
         ?.let { name -> TxnType.entries.firstOrNull { it.name == name } } ?: TxnType.EXPENSE
     private val payCardId: String? = savedState[Routes.ARG_CARD]
 
-    private val _form = MutableStateFlow(TxnForm(type = initialType, category = TxnCategory.of(initialType).first()))
+    private val _form = MutableStateFlow(TxnForm(type = initialType, category = CategoryInfo.of(TxnCategory.of(initialType).first())))
     val form: StateFlow<TxnForm> = _form
 
     init {
@@ -90,9 +97,11 @@ class TxnAddViewModel @Inject constructor(
                 MoneyOption(it.name, MoneyKind.CARD, "${Money.format(it.outstandingMinor)} used", cardId = it.id)
             }
             val payCard = cardEntities.firstOrNull { it.id == payCardId }
+            val custom = listOf(TxnType.EXPENSE, TxnType.INCOME).associateWith { txns.customCategories(it) }
             _form.update { f ->
                 f.copy(
                     accounts = banks + cash,
+                    customCategories = custom,
                     cards = cards,
                     // A card bill is paid from a bank account, so pre-pick one if there is exactly one.
                     from = if (payCard != null) banks.singleOrNull() else null,
@@ -103,12 +112,28 @@ class TxnAddViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Picks a category the user typed. A name that is already in the list selects that one
+     * instead of creating a twin.
+     */
+    fun addCategory(name: String, iconKey: String) = update {
+        val clean = name.trim()
+        if (clean.isEmpty()) return@update this
+        val existing = categories.firstOrNull { it.label.equals(clean, ignoreCase = true) }
+        if (existing != null) return@update copy(category = existing)
+        val created = CategoryInfo.custom(clean, iconKey)
+        copy(
+            category = created,
+            customCategories = customCategories + (type to (customCategories[type].orEmpty() + created)),
+        )
+    }
+
     fun update(change: TxnForm.() -> TxnForm) = _form.update { it.change().copy(errors = emptyMap()) }
 
     fun onType(type: TxnType) = update {
         copy(
             type = type,
-            category = TxnCategory.of(type).first(),
+            category = CategoryInfo.of(TxnCategory.of(type).first()),
             // Income cannot land on a credit card.
             from = from?.takeUnless { it.isCard && type != TxnType.EXPENSE },
             to = null,
@@ -143,7 +168,7 @@ class TxnAddViewModel @Inject constructor(
                 TxnType.EXPENSE, TxnType.INCOME -> Txn(
                     type = f.type,
                     amountMinor = amount,
-                    category = f.category.name,
+                    category = f.category.stored,
                     accountId = from?.accountId,
                     cardId = from?.cardId,
                     note = f.note.trim(),

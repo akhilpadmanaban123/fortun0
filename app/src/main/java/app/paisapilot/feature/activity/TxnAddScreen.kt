@@ -6,10 +6,16 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -17,25 +23,32 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.paisapilot.core.designsystem.AmountField
+import app.paisapilot.core.designsystem.CategoryIcons
 import app.paisapilot.core.designsystem.DateField
 import app.paisapilot.core.designsystem.DropdownField
 import app.paisapilot.core.designsystem.FormScaffold
 import app.paisapilot.core.designsystem.TextInput
-import app.paisapilot.core.model.TxnCategory
+import app.paisapilot.core.designsystem.icon
+import app.paisapilot.core.model.CategoryInfo
 import app.paisapilot.core.model.TxnType
 
 @Composable
 fun TxnAddScreen(onDone: () -> Unit, viewModel: TxnAddViewModel = hiltViewModel()) {
     val form by viewModel.form.collectAsStateWithLifecycle()
     val types = TxnType.entries
+    var showAddCategory by rememberSaveable { mutableStateOf(false) }
 
     FormScaffold(
         title = when (form.type) {
@@ -82,17 +95,86 @@ fun TxnAddScreen(onDone: () -> Unit, viewModel: TxnAddViewModel = hiltViewModel(
                 error = form.errors["from"],
                 hint = if (form.accounts.none { it.kind == MoneyKind.BANK }) "Add your bank accounts in Wallet to choose them here." else null,
             )
-            DropdownField(
-                label = "Category",
+            CategoryPicker(
+                options = form.categories,
                 selected = form.category,
-                options = TxnCategory.of(form.type),
-                optionLabel = { it.label },
                 onSelected = { viewModel.update { copy(category = it) } },
+                onAddOwn = { showAddCategory = true },
             )
         }
         DateField("Date", form.date, { viewModel.update { copy(date = it) } })
         TextInput(form.note, { viewModel.update { copy(note = it) } }, "Note (optional)", maxLength = 80)
     }
+
+    if (showAddCategory) {
+        AddCategoryDialog(
+            onAdd = { name, iconKey ->
+                viewModel.addCategory(name, iconKey)
+                showAddCategory = false
+            },
+            onDismiss = { showAddCategory = false },
+        )
+    }
+}
+
+/** Every category as a chip with its icon, ending with a chip for adding one of your own. */
+@Composable
+private fun CategoryPicker(
+    options: List<CategoryInfo>,
+    selected: CategoryInfo,
+    onSelected: (CategoryInfo) -> Unit,
+    onAddOwn: () -> Unit,
+) {
+    Column {
+        Text("Category", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { option ->
+                FilterChip(
+                    selected = option == selected,
+                    onClick = { onSelected(option) },
+                    leadingIcon = { Icon(option.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    label = { Text(option.label) },
+                )
+            }
+            AssistChip(
+                onClick = onAddOwn,
+                leadingIcon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                label = { Text("Add your own") },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddCategoryDialog(onAdd: (name: String, iconKey: String) -> Unit, onDismiss: () -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var iconKey by rememberSaveable { mutableStateOf(CategoryIcons.first().key) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Your own category") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextInput(name, { name = it }, "Name, e.g. Tea, Pets, Gym", maxLength = CategoryInfo.MAX_NAME_LENGTH)
+                Text("Pick an icon", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    CategoryIcons.forEach { icon ->
+                        FilledTonalIconToggleButton(
+                            checked = icon.key == iconKey,
+                            onCheckedChange = { iconKey = icon.key },
+                        ) { Icon(icon.image, contentDescription = icon.name) }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAdd(name, iconKey) }, enabled = name.isNotBlank()) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** One-tap choice between the user's bank accounts, cash and cards. */
