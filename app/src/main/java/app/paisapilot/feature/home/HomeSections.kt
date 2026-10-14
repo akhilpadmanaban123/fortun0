@@ -50,7 +50,7 @@ import app.paisapilot.core.designsystem.ProgressLine
 import app.paisapilot.core.designsystem.SectionCard
 import app.paisapilot.core.designsystem.Stat
 import app.paisapilot.core.finance.MoneySnapshot
-import app.paisapilot.core.model.TxnCategory
+import app.paisapilot.core.model.CategoryInfo
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.daysBetween
 import app.paisapilot.core.util.short
@@ -357,7 +357,7 @@ internal fun SpendingCard(s: MoneySnapshot) {
     // Largest categories get their own slice; the long tail is grouped so the ring stays readable.
     val sorted = s.spendByCategory.entries.sortedByDescending { it.value }
     val top = sorted.take(MAX_SLICES).mapIndexed { i, (name, value) ->
-        ChartSlice(TxnCategory.fromName(name).label, value, ChartPalette[i])
+        ChartSlice(CategoryInfo.of(name).label, value, ChartPalette[i])
     }
     val rest = sorted.drop(MAX_SLICES).sumOf { it.value }
     val slices = if (rest > 0) top + ChartSlice("Everything else", rest, ChartPalette[MAX_SLICES]) else top

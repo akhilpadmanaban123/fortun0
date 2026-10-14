@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import app.paisapilot.core.designsystem.ListRow
 import app.paisapilot.core.designsystem.LocalMoneyColors
 import app.paisapilot.core.designsystem.icon
-import app.paisapilot.core.model.TxnCategory
+import app.paisapilot.core.model.CategoryInfo
 import app.paisapilot.core.model.TxnType
 import app.paisapilot.core.util.Money
 import app.paisapilot.core.util.short
@@ -16,7 +16,7 @@ import app.paisapilot.data.local.entity.Txn
 @Composable
 fun TxnRow(txn: Txn, modifier: Modifier = Modifier, showDate: Boolean = true) {
     val money = LocalMoneyColors.current
-    val category = TxnCategory.fromName(txn.category)
+    val category = CategoryInfo.of(txn.category)
     val (sign, color) = when (txn.type) {
         TxnType.INCOME -> "+" to money.positive
         TxnType.EXPENSE -> "-" to MaterialTheme.colorScheme.onSurface

@@ -1,6 +1,7 @@
 package app.paisapilot.data.repository
 
 import androidx.room.withTransaction
+import app.paisapilot.core.model.CategoryInfo
 import app.paisapilot.core.model.TxnType
 import app.paisapilot.data.local.AppDatabase
 import app.paisapilot.data.local.entity.Txn
@@ -33,6 +34,10 @@ class TxnRepository @Inject constructor(
         txnDao.observeBetween(from.atDay(1).toEpochDay(), to.atEndOfMonth().toEpochDay())
 
     fun observeRecent(limit: Int): Flow<List<Txn>> = txnDao.observeRecent(limit)
+
+    /** The categories the user has typed themselves for this kind of transaction, most recent first. */
+    suspend fun customCategories(type: TxnType): List<CategoryInfo> =
+        txnDao.categoriesLike(type, CategoryInfo.STORED_PATTERN).map { CategoryInfo.of(it) }.filter { it.isCustom }
 
     suspend fun add(txn: Txn) {
         db.withTransaction { addInTransaction(txn) }
